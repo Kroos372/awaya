@@ -27,7 +27,7 @@ PROLOGUE = info["PROLOGUE"]
 # 自定义回复，自定义去吧
 RANDLIS = [
     [f"找{owner}去吧。", "早上好！", "干什么?", "想下象棋吗？发送菜单看看？", "好耶！", "在~", "sender寂寞了吧", "发送菜单了解我的功能~", "怎么了？"],#0
-    ["嗯嗯", "sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "原来如此..."],#1
+    ["sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "是这样的", "/me awa"],#1
     ["有", "嗯（冷漠）", "没", "sender不会是寂寞了吧", "人……人……有吧？", "你叫一声？"],#2
     ["拜", "bye~", "下次再来啊~", "等着你哦", "别忘了这里哦~"],#3
     ["也没有那么傻", "知道了知道了", "sender……", "没想到sender意外地有自知之明呢", "啊对对对", "智将（确信）", "没活整可以咬打火机。", "正确的"],#4
@@ -74,14 +74,21 @@ RANDLIS = [
     ["这么无理的要求怎么可能满足呢~", "你知道的，机器人，是，没法死亡的哦~", "你可以先去试试？额呵呵~"],#13
     ["遇到什么伤心事了吗？哭出来吧，也许痛痛快快地哭一场能让心情舒坦一些……", "遇到什么事情了？虽然可能没办法帮上你的忙，不过我会一直陪着你的。加油，sender！",
     "伤心的话就去睡一觉吧！找找你喜欢做的事情，你的兴趣所在，回想回想开心的瞬间……都会过去的，sender，不要担心，不要难过了。", "如果是为了别人的话可能真的不值得呢……啊，我的意思是我们有时候也应该考虑考虑自己，不是吗？"],#14
-    ["お前も舞うか？", "大丈夫だよ~", "senderのこと、好きです！", "この世のすべての不利益は当人の能力不足", "斜め七十七度の并びで泣く泣くいななくナナハン七台难なく并べて长眺め",
+    ["大丈夫だよ~", "senderのこと、好きです！", "この世のすべての不利益は当人の能力不足", "斜め七十七度の并びで泣く泣くいななくナナハン七台难なく并べて长眺め",
     "届けなくちゃ意味ないよ　思ってるだけじゃ出来ないよ、歩かなくちゃたどり着けないよ　悩んでる暇なんてないよ", "見てみなくちゃわかんないよ 知らなくちゃ無いのと同じだよ、いつ来るかわからない「いつか」なら 今から迎えに行こう",
     "失敗なんて怖くないよ　怖いのは何も残せないことだ", "俺の痛みは、お前の以上だ！", "ねぇねぇねぇ。　臆病な劣等生、ぼくたちは未経験です。 世界中　「好き」で溢れてるのに、ひとりきりみたいな感じ",
-    "ねぇねぇねぇ。　端役の八等星、不器用なりに夢を見て。 心の奥深くで迷子の恋、他人事みたいな感じ"],#15
+    "ねぇねぇねぇ。　端役の八等星、不器用なりに夢を見て。 心の奥深くで迷子の恋、他人事みたいな感じ", "你好中二。"],#15
     ["蛤？你是想问有多少机器人吗？鬼能数的清啊！如果你没那么强迫症的话倒可以去问问eb……", "什么？你也想做一个？呃算了，劝你别那么想……呃，不过如果真的想做的话谁也拦不住吧...好吧，你开心就好（苦笑）……算了，开玩笑的，你想做就做吧，随便问谁都行~", 
     "机器人啊，现在已经是机器人的时代了吗？啊哈哈，开玩笑，只是不断进步的时代和快速涌现的各种机器人也让人感到一种危机感啊……现在机器人也要卷啊，不过也许过不了多久，这里就真的是机器人的天下了……因为\
     好制作呗，而且没有人会管你做的质量怎么样，你要是放上来了基本就没谁能拿走了。你懂我意思吧？你懂。但还是得以乐观的心态看看吧……"],#16
     ["没活了可以咬打火机。", "理论上说，所谓的无聊都只是懒而已。", "学习，做一些自己感兴趣的事情？", "错误的", "给大家整个活：", "发电发电！"], #17
+    ["呜呜呜……", "可是……作为Bot的话……闭嘴后不就毫无意义了吗……", "sender……你也不想被知道欺负小朋友吧...", "就不闭就不闭，啦啦啦(～￣▽￣)～",
+    "你可以试试？", "嘴巴不要可以捐献给我XD"], #18
+    ["啊对对对。", "滋滋滋滋滋滋滋……", "我不要被开源我不要被开源我不要aaaaaaaaaa", "你有没有觉得这样就像看着我的……", "0.0"], #19
+    ["早饭/午饭/晚饭准备吃什么？", "早饭/午饭/晚饭吃了什么？", "你最讨厌/喜欢*哪类*人？（任选一种即可）", "你认为人生的意义是什么？", 
+    "接下来/明天/这周末打算做什么？（任选一）", "你最喜欢星期几，为什么？", "你最喜欢什么季节/哪个月？（任选一）", "说一件最让你感到生气/开心/难过的事情。（任选一）",
+    "你最喜欢什么运动/颜色？", "如果你能得到一样超能力，你希望那是什么，为什么？", "你对现在的社会环境满意吗？如果不，你认为哪里需要改进？",
+    "你认为自己是个怎样的人？", "你多大了？", "你的性别？", "你有宠物吗？如果有的话是什么，如果没有的话你最想要什么宠物？"], #20
 ]
 RULE = "\n".join([
 	"好、的，听清楚规则了哦~",
@@ -119,7 +126,7 @@ MENU = "\n".join([
 	"功能菜单\\~",
 	"|命令|介绍|例|备注|",
 	"|:-:|:-:|:-:|:-:|",
-	"|~peep 数字|浏览历史的x条消息|~peep 10|目前最多377条~~，因为不想存太多而且存太多大概也发不出去吧~~|",
+	"|~peep 正整数|浏览历史的x条消息|~peep 10|目前最多377条~~，因为不想存太多而且存太多大概也发不出去吧~~|",
 	f"|~colo 昵称|查看某人的颜色值 | ~colo @{nick}| `@`可省略~~用colo而非color只是为了让所有命令字数一致~~|",
 	f"|~hash 昵称|查看某人的历史昵称 | ~hash @{nick}| `@`可省略|",
 	"|~code hash码| 查看某hash的历史昵称| ~code abcdefg | 可使用`/myhash`查看自己的hash码|",
@@ -128,10 +135,12 @@ MENU = "\n".join([
     "|~last 文本| 留下一句话 | ~last 疯狂星期四v我50 | 作用类似于留言，最好在自己要走或afk的时候用。需要识别码。 |",
     f"|~lost 昵称| 查看某人留下的话 | ~lost @{owner} | ==@==可省略~~这句话都没必要说~~ |",
     f"|~unlo 昵称| 清除留下的话 | ~unlt @{owner} | 请求清除者的识别码须和留言者一样。用完就扔是个好习惯哦~ |",
+    "|~prim 正整数 | 分解质因数 | ~prim 1234567890123 | 最多十七位数，超过会被自动截断 |",
 
 	"|~random|随机设计，没用，就是玩|~random|来自[这里](https://protobot.org/#zh) |",
 	"|afk|标记自己为挂机状态，标记后发言时自动解除|afk 吃饭|借鉴自bo_od|",
-	"|r|获取随机数|r 100|r后面若加空格与整数则代表取 1~该数字(含) 间的随机数，否则取1~1000间。非单独的r在真心话中会被忽略。|",
+	"|r|获取随机数|r 100|r后面若加空格与整数则代表取 1\\~该数字(含)或该数字（含）\\~1间的随机数，否则取1\\~1000间。非单独的r在真心话中会被忽略。|",
+    "|rprim|获取随机数并分解质因数|rprim 999|规则与~prim, r相同~~质因数分解玩魔怔了~~|",
 	f"|@bot名 文本|聊天|@{nick} help| 可私聊，API来自[青云客](https://api.qingyunke.com/)~~也有一部分是我主人亲笔写的~~|",
 	f"|@bot名 帮助|象棋bot的帮助|@{nick} 帮助|象棋！|",
 	"|真心话|真心话|真心话|借鉴自eebot|",
@@ -143,14 +152,15 @@ MENU = "\n".join([
 GAMEMENU = "\n".join([
 	"真心话现在开始啦，发送==r==来获取随机数，==结算==来结算，==结束游戏==来结束游戏~",
 	"以下是注意事项：",
-	"1\\.愿赌服输，所谓的==真心话==的意思是什么，参与了就不能后悔了，",
+	"1\\.愿赌服输，所谓的**真心话**的意思是什么，参与了就不能后悔了，",
 	"2\\.不要把游戏当成拷问，提的问题请在能够接受的范围内，",
 	"3\\.尺度请自行把握，不用过于勉强自己也不要勉强他人，",
-	"4\\.玩得愉快。"
+	"4\\.玩得愉快。",
+    f"PS:***实在***没活整了可以发送==@{nick} 提问==获取些离谱小问题……"
 ])
 
 with open("design.json", encoding="utf8") as f:
-    designDict = json.loads(dec(f.read()))
+    designs = json.loads(dec(f.read()))
 with open(FILENAME, encoding="utf8") as f:
     data = json.loads(dec(f.read()))
 with open("userData.json", encoding="utf8") as f:
@@ -164,11 +174,23 @@ def namePure(name: str) -> str:
     return name.replace("@", "").replace(" ", "")
 # 获取离谱玩意儿
 def randomDesign() -> str:
-    item = random.choice(designDict["items"])
-    constraint = random.choice(designDict["constraints"])
-    if constraint[0] == "为":
-        return f"{constraint}设计一种{item}"
-    return f"设计一种{constraint}{item}"
+    item = random.choice(designs["items"])
+    const = random.choice(designs["constraints"])
+    prepend = random.choice(designs["prepend"])
+    if const[-1] == "的":
+        return f"{prepend}{const}{item}"
+    return f"{const}{prepend}{item}"
+# 分解质因数
+def getPrime(i, factors) -> list:
+    if i == 1:
+        return ["没法分解啊啊啊啊！"]
+    for x in range(2, int(i**0.5 + 1)):
+        if i % x == 0:
+            factors.append(str(x))
+            getPrime(int(i / x), factors)
+            return factors
+    factors.append(str(i))
+    return factors
 def hashByName(name: str) -> str:
     lis, count = [], 0
     for names in data.values():
@@ -215,10 +237,13 @@ def reply(sender: str, msg: str) -> str:
             return random.choice(RANDLIS[15]).replace("sender", sender)
         elif "机器人" in msg:
             return random.choice(RANDLIS[16]).replace("sender", sender)
+        elif "闭嘴" in msg:
+            return random.choice(RANDLIS[18]).replace("sender", sender)
+        elif "发电" in msg:
+            return random.choice(RANDLIS[19]).replace("sender", sender)
     cont = requests.get(f"https://api.qingyunke.com/api.php?key=free&msg={msg}")
-    cont = cont.json()["content"].replace("菲菲", "阿瓦娅").replace("{br}", "\n")\
+    return cont.json()["content"].replace("菲菲", "阿瓦娅").replace("{br}", "\n")\
     .replace("help", "==@bot名 help==，==菜单==或==@bot名 帮助==")
-    return cont
 
 def msgGot(chat, msg: str, sender: str, result: dict):
     rans = random.randint(1, 134)
@@ -307,6 +332,29 @@ def msgGot(chat, msg: str, sender: str, result: dict):
                 chat.sendMsg(f"您的识别码与被清除者不同！正确识别码应为{dic[name][0]}！")
         else:
             chat.sendMsg("此用户还没有设置留言~")
+    elif command == "~prim ":
+        try:
+            digit = msg[6:23]
+            eq = "\\*".join(getPrime(int(digit), []))
+            chat.sendMsg(f"{digit}={eq}")
+        except ValueError:
+            chat.sendMsg("请输入一个***正整数***啊啊啊啊！")
+    elif msg == "rprim":
+        digit = str(random.randint(1, 1000))
+        eq = "\\*".join(getPrime(int(digit), []))
+        chat.sendMsg(f"{digit}={eq}")
+    elif command == "rprim ":
+        digit = msg[6:23]
+        try:
+            if (dig:=random.randint(1, int(digit))) > 0:
+                eq = "\\*".join(getPrime(dig, []))
+                chat.sendMsg(f"{dig}={eq}")
+            else:
+                raise ValueError
+        except ValueError as e:
+            digit = str(random.randint(1, 1000))
+            eq = "\\*".join(getPrime(int(digit), []))
+            chat.sendMsg(f"{digit}={eq}")
 
     elif msg.strip() == f"@{chat.nick}":
         if rans > 130:
@@ -375,6 +423,8 @@ def msgGot(chat, msg: str, sender: str, result: dict):
             chat.sendMsg("已禁用")
     elif msg == "菜单":
         chat.sendMsg(f"/w {sender} {MENU}")
+    elif msg == "提问":
+        chat.sendMsg(random.choice(RANDLIS[20]).replace("sender", sender))
     elif msg == "~random":
         chat.sendMsg(randomDesign())
     elif rans > 130:
