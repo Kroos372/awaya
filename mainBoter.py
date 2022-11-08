@@ -479,13 +479,15 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             chat.sendMsg("已禁用")
     elif msg == "菜单":
         if senderTrip == OWNER:
-            chat.sendMsg(f"/w {sender} {MENU+MENUSSP}")
+            men = "\n".join(MENU+MENUSSP)
         elif senderTrip in whiteList:
-            chat.sendMsg(f"/w {sender} {MENU+MENUSP}")
+            men = "\n".join(MENU+MENUSP)
         else:
-            chat.sendMsg(f"/w {sender} {MENU+MENUFT}")
+            men = "\n".join(MENU+MENUFT)
+        chat.sendMsg(f"/w {sender} {men}")
     elif msg == "菜单w" and senderTrip in whiteList:
-        chat.sendMsg(f"/w {sender} {ADMMENU}")
+        men = "\n".join(ADMMENU)
+        chat.sendMsg(f"/w {sender} {men}")
     elif msg == "菜单~" and senderTrip == OWNER:
         chat.sendMsg(f"/w {sender} {OWNMENU}")
     elif msg == "menu":
@@ -806,7 +808,7 @@ class HackChat:
 
             # print(result)
             # 接收到消息
-            if cmd == "chat" and not (result["hash"] in blackList or rnick == nick):
+            if cmd == "chat" and not (userHash[rnick] in blackList or rnick == nick):
                msgGot(self, result["text"], rnick, userTrip[rnick])
             # 有人加入时
             elif cmd == "onlineAdd":
