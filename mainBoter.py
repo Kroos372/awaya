@@ -14,11 +14,14 @@ with open("info.json", encoding="utf8") as f:
 # [象棋开关, 轮到谁, 结束游戏的人, 涩图开关, 真心话开关]
 thingsList = [False, None, None, False, False]
 channel, nick, passwd, color, owner = info["channel"], info["nick"], info["passwd"], info["color"], info["owner"]
+# 主人：无所不能的卡密哒！
+OWNER = info["ownerTrip"]
 # 白名单用户功能：私信~hash，清除任何人留言，涩图开关
-whiteList = info["whiteList"]
+whiteList = info["whiteList"] + [OWNER]
 # 黑名单：不回复
-blackList = info["blackList"] + [nick]
-allMsg, afk, userColor, leftMsg, userHash, redBlack, nickRolled, gameHash = [], {}, {}, {}, {}, [], {}, []
+blackList = info["blackList"]
+allMsg, afk, userColor, leftMsg, redBlack, nickRolled, gameHash = [], {}, {}, {}, [], {}, []
+userHash, userTrip = {}, {}
 
 CLOLUMN, LETTERS = ["| \\ |1|2|3|4|5|6|7|8|9|", "|-|-|-|-|-|-|-|-|-|-|"], list("ABCDEFGHIJ")
 RED, BLACK = ["车", "马", "相", "士", "帥", "兵", "炮"], ["車", "馬", "象", "仕", "將", "卒", "砲"]
@@ -122,7 +125,7 @@ INIT=np.array([
     ["車", "馬", "象", "仕", "將", "仕", "象", "馬", "車"],
 ])
 CBL = [None]
-MENU = "\n".join([
+MENU = [
 	"功能菜单\\~",
 	"|命令|介绍|例|备注|",
 	"|:-:|:-:|:-:|:-:|",
@@ -130,33 +133,85 @@ MENU = "\n".join([
 	f"|~colo 昵称|查看某人的颜色值 | ~colo @{nick}| `@`可省略~~用colo而非color只是为了让所有命令字数一致~~|",
 	f"|~hash 昵称|查看某人的历史昵称 | ~hash @{nick}| `@`可省略|",
 	"|~code hash码| 查看某hash的历史昵称| ~code abcdefg | 可使用`/myhash`查看自己的hash码|",
-	f"|~left 昵称 文本|留言，在昵称上线时将您的话传达给ta|~left {nick} hello world|借鉴自[3xi573n7ivli5783vR](?math)~~如果在你要留言的人上线之前bot下线了的话肯定就没办法……~~|",
-    "|~welc 文本| 设置欢迎语 | ~welc ᕕ( ᐛ )ᕗ | 自eebot。按照识别码储存! |",
+	f"|~left 昵称 文本|留言，在昵称上线时将您的话传达给ta|~left @{nick} hello world|借鉴自[3xi573n7ivli5783vR](?math)，`@`可省略~~如果在你要留言的人上线之前bot下线了的话肯定就没办法……~~|",
+    "|~welc 文本| 为当前识别码设置欢迎语 | ~welc ᕕ( ᐛ )ᕗ | 自eebot。按照识别码储存! |",
     "|~last 文本| 留下一句话 | ~last 疯狂星期四v我50 | 作用类似于留言，最好在自己要走或afk的时候用。需要识别码。 |",
-    f"|~lost 昵称| 查看某人留下的话 | ~lost @{owner} | ==@==可省略~~这句话都没必要说~~ |",
+    f"|~lost 昵称| 查看某人留下的话 | ~lost @{owner} | `@`可……你知道我要说什么 |",
     f"|~unlo 昵称| 清除留下的话 | ~unlt @{owner} | 请求清除者的识别码须和留言者一样。用完就扔是个好习惯哦~ |",
     "|~prim 正整数 | 分解质因数 | ~prim 1234567890123 | 最多十七位数，超过会被自动截断 |",
 
 	"|~random|随机设计，没用，就是玩|~random|来自[这里](https://protobot.org/#zh) |",
 	"|afk|标记自己为挂机状态，标记后发言时自动解除|afk 吃饭|借鉴自bo_od|",
-	"|r|获取随机数|r 100|r后面若加空格与整数则代表取 1\\~该数字(含)或该数字（含）\\~1间的随机数，否则取1\\~1000间。非单独的r在真心话中会被忽略。|",
+	"|r|获取随机数|r 100|r后面若加空格与整数则代表取 1\\~该数字(含)或该数字（含）\\~1间的随机数，否则取1\\~1000间。|",
     "|rprim|获取随机数并分解质因数|rprim 999|规则与~prim, r相同~~质因数分解玩魔怔了~~|",
-	f"|@bot名 文本|聊天|@{nick} help| 可私聊，API来自[青云客](https://api.qingyunke.com/)~~也有一部分是我主人亲笔写的~~|",
+    "|listwh|列出白名单识别码|listwh|==list wh==itelist users|",
+	f"|@bot名 文本|聊天|@{nick} help| API来自[青云客](https://api.qingyunke.com/)~~也有一部分是我主人亲笔写的~~|",
 	f"|@bot名 帮助|象棋bot的帮助|@{nick} 帮助|象棋！|",
 	"|真心话|真心话|真心话|借鉴自eebot|",
-	"|时间|显示当前时间|时间| ~~这东西的用处在哪里~~ |",
 	"|涩图| 涩图 | 涩图 | 涩图，API来自[Lolicon](https://api.lolicon.app/) |",
+    "|menu|Return English version of this menu. |menu|\\|",
+]
+MENUFT = [
     "Bot源码请查看[这里](https://github.com/Kroos372/awaBot/)。",
-	"注： 我可能会因为某些~~疯狂的人为~~原因卡出一些不可逆的bug，届时只能重启，所以请酌情使用呢，感谢您的配合\\~"
+    "注： 我可能会因为某些~~疯狂的人为~~原因卡出一些不可逆的bug，届时只能重启，所以请酌情使用呢，感谢您的配合\\~"
+]
+MENUSP = [
+    "|菜单w|白名单用户的特殊菜单|菜单w| \\ |",
+] + MENUFT
+MENUSSP = [
+    "|菜单~|主人的特殊菜单~|菜单~| \\ |",
+]
+ADMMENU = [
+    "白名单用户的特殊服务~",
+    "|命令|介绍|例|备注|",
+    "|:-:|:-:|:-:|:-:|",
+    "|0setu 0或1|涩图开关，0关1开|0setu 1| 实际上是int后面的语句 |",
+    "|0addb 昵称|添加黑名单用户（输入的是昵称，添加的是hash）|0addb coBad2| ==addb==lacklist user，不能将白名单用户添加进黑名单~~（你怎么敢的啊）~~ |",
+    "|0delb 昵称|删除黑名单用户|0delb coBad2| \\ |",
+]
+OWNMENU = "\n".join([
+    "只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
+    "|0addw 识别码|添加白名单用户（识别码）|0addw coBad2| ==addw==hitelist user|",
+    "|0delw 识别码|删除白名单用户|0delw coBad2| \\ |",
+])
+ENGMENU = "\n".join([
+    "Here are all functions menu:",
+    "|Command|Description|e.g.|Note|",
+    "|:-:|:-:|:-:|:-:|",
+    "|~peep <integers>|View last <integers> history messages| <integers> up to 377.|",
+    f"|~colo <nickname>| Return <nickname>'s hex color value. | ~colo @{nick}| `@` can be omitted.|",
+    f"|~hash <nickname>| Return history nicknames that <nickname> have used. | ~hash @{nick}| `@` can be omitted. |",
+    "|~code <hashcode>| Return history nicknames of <hashcode>. | ~code abcdefg | Use `/myhash` to check your hashcode.|",
+    "|~left <nickname> <message> | Leave a message for <nickname>, <message> will be whispered to him/her when he/she join" +
+    f"the channel|~left @{nick} hello world| `@` can be omitted. |",
+    "|~welc <message> | Set welcome text for current trip. | ~welc ᕕ( ᐛ )ᕗ | Trip is a must. |",
+    "|~last <message> | Leave a message that everyone can check. | ~last I'll be back tomorrow. | Trip is a must. |",
+    f"|~lost <nickname> | Check the message that <nickname> left. | ~lost @{owner} | `@` can be... u know what im going to say :D |",
+    f"|~unlo <nickname> | Clear the message that u left by `~last` | ~unlt @{owner} | <nickname>'s trip must be as same as yours. |",
+    "|~prim <digit> | Decomposing prime factors for <digit>. | ~prim 1234567890123 | Up to 17 digits, more than that will be automatically cut off. |",
+
+    "|~random| Get a random design. |~random|From [HERE](https://protobot.org/#zh) |",
+    "|afk| Mark yourself as afk, automatically unmark the next time you say sth. |afk sleeping| AFK(Away From Keyboard) |",
+    "|r| Get a random number. |r 100| if r followed by a space and an integer, return a random number between 1 to that integer" +
+    "(include) or that integer(include) to 1, else return random number between 1 to 1000. |",
+    "|rprim| Decomposing prime factors for a random number. |rprim 9999| Rules are as same as `r` + `~prim` |",
+    f"|@<botname> <message> | Chat in Chinese with bot. | @{nick} help | API from [HERE](https://api.qingyunke.com/). |",
+    f"|@<botname> 帮助| Help message of Chinese Chess Bot. | @{nick} 帮助| \\ |",
+    "|真心话| Start a Truth ~~or Dare~~ game. | 真心话 | \\ |",
+    "|菜单| Return Chinese version of this menu. | 菜单 | \\ |",
+    "|涩图| Beatiful pictures XD | 涩图 | API from [Lolicon](https://api.lolicon.app/). |",
+    "| engvers | Use english version for current trip (All reply *for you* will be in English)| engvers | Not supported now, to be continue...| ",
+    "This bot is open-sourced, you can view all source code [HERE](https://github.com/Kroos372/awaBot/)."
 ])
 GAMEMENU = "\n".join([
-	"真心话现在开始啦，发送==r==来获取随机数，==结算==来结算，==结束游戏==来结束游戏~",
+	"真心话现在开始啦，发送*r*来获取随机数，*结算*来结算，*结束游戏*来结束游戏~",
 	"以下是注意事项：",
 	"1\\.愿赌服输，所谓的**真心话**的意思是什么，参与了就不能后悔了，",
 	"2\\.不要把游戏当成拷问，提的问题请在能够接受的范围内，",
 	"3\\.尺度请自行把握，不用过于勉强自己也不要勉强他人，",
 	"4\\.玩得愉快。",
-    f"PS:***实在***没活整了可以发送==@{nick} 提问==获取些离谱小问题……"
+    f"PS: ***实在***没活整了可以发送==@{nick} 提问==获取些离谱小问题……",
+    f"PSS: 获取随机数只能用*r*，而不是*r 数字*，后者在真心话中会被忽略。"
 ])
 
 with open("design.json", encoding="utf8") as f:
@@ -245,7 +300,7 @@ def reply(sender: str, msg: str) -> str:
     return cont.json()["content"].replace("菲菲", "阿瓦娅").replace("{br}", "\n")\
     .replace("help", "==@bot名 help==，==菜单==或==@bot名 帮助==")
 
-def msgGot(chat, msg: str, sender: str, result: dict):
+def msgGot(chat, msg: str, sender: str, senderTrip: str):
     rans = random.randint(1, 134)
     this_turn = f"{sender}：{msg}"
     # print(this_turn)
@@ -281,16 +336,16 @@ def msgGot(chat, msg: str, sender: str, result: dict):
             if color:
                 chat.sendMsg(namePure(color))
             else:
-                chat.sendMsg("该用户还没有设置颜色")
+                chat.sendMsg("该用户还没有设置颜色！")
         else:
-            chat.sendMsg("没有这个用户")
+            chat.sendMsg("没有这个用户！")
     elif command == "~left ":
         if len(lis := msg.split()) < 3:
-            chat.sendMsg("命令不正确")
-        elif not re.findall(r"^[a-zA-Z0-9_]{1,24}$", lis[1]):
-            chat.sendMsg("昵称不合法")
+            chat.sendMsg("命令不正确！")
+        elif not re.match(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
+            chat.sendMsg("昵称不合法！")
         else:
-            leftMsg[time.time()] = [sender, lis[1], "".join(lis[2:])]
+            leftMsg[time.time()] = [sender, namePure(lis[1]), "".join(lis[2:])]
             chat.sendMsg(f"@{sender}, @{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
     elif command == "~peep ":
         try:
@@ -304,17 +359,20 @@ def msgGot(chat, msg: str, sender: str, result: dict):
     elif command == "~welc ":
         if (text := msg[6:])[0] == "/":
             chat.sendMsg("诶！你想干什么？真是坏心眼~")
-        elif (trip := result.get("trip")):
+        elif (trip := senderTrip):
             userData["welText"][trip] = text
             writeJson("userData.json", userData)
             chat.sendMsg(f"为识别码{trip}设置欢迎语成功了！")
         else:
             chat.sendMsg("您当前还没有识别码，请重进并在昵称输入界面使用==昵称#密码==设置一个！")
     elif command == "~last ":
-        if (trip := result.get("trip")):
-            userData["lastText"][sender] = [trip, msg[6:]]
-            writeJson("userData.json", userData)
-            chat.sendMsg(f"为{sender}({trip})设置留言成功了！记得及时清除哦！")
+        if (trip := senderTrip):
+            if not re.match(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
+                chat.sendMsg("昵称不合法！")
+            else:
+                userData["lastText"][sender] = [trip, msg[6:]]
+                writeJson("userData.json", userData)
+                chat.sendMsg(f"为{sender}({trip})设置留言成功了！记得及时清除哦！")
         else:
             chat.sendMsg("您当前还没有识别码，请重启并在昵称输入界面使用==昵称#密码==设置一个！")
     elif command == "~lost ":
@@ -324,7 +382,7 @@ def msgGot(chat, msg: str, sender: str, result: dict):
             chat.sendMsg("该用户还没有设置留言~")
     elif command == "~unlo ":
         if (name:=namePure(msg[6:])) in (dic:=userData["lastText"]):
-            if result.get("trip") == dic[name][0] or result.get("trip") in whiteList:
+            if senderTrip == dic[name][0] or senderTrip in whiteList:
                 del dic[name]
                 writeJson("userData.json", userData)
                 chat.sendMsg("留言已删除，感谢您的使用！")
@@ -363,8 +421,6 @@ def msgGot(chat, msg: str, sender: str, result: dict):
             chat.sendMsg(random.choice(RANDLIS[0]).replace("sender", sender))
     elif msg[:len(chat.nick)+2] == f"@{chat.nick} " :
             chat.CCreply(sender, msg[len(chat.nick)+2:])
-    elif msg == "时间":
-        chat.sendMsg(time.ctime(time.time()))
     elif msg[-3:] == " 天气" or useful == "翻译 " :
         cont = requests.get(f"https://api.qingyunke.com/api.php?\
             key=free&msg={msg}")
@@ -422,7 +478,18 @@ def msgGot(chat, msg: str, sender: str, result: dict):
         else:
             chat.sendMsg("已禁用")
     elif msg == "菜单":
-        chat.sendMsg(f"/w {sender} {MENU}")
+        if senderTrip == OWNER:
+            chat.sendMsg(f"/w {sender} {MENU+MENUSSP}")
+        elif senderTrip in whiteList:
+            chat.sendMsg(f"/w {sender} {MENU+MENUSP}")
+        else:
+            chat.sendMsg(f"/w {sender} {MENU+MENUFT}")
+    elif msg == "菜单w" and senderTrip in whiteList:
+        chat.sendMsg(f"/w {sender} {ADMMENU}")
+    elif msg == "菜单~" and senderTrip == OWNER:
+        chat.sendMsg(f"/w {sender} {OWNMENU}")
+    elif msg == "menu":
+        chat.sendMsg(f"/w {sender} {ENGMENU}")
     elif msg == "提问":
         chat.sendMsg(random.choice(RANDLIS[20]).replace("sender", sender))
     elif msg == "~random":
@@ -449,21 +516,49 @@ def msgGot(chat, msg: str, sender: str, result: dict):
     elif msg == "#精神状态":
         chat.sendMsg("ᕕ( ᐛ )ᕗ")
     # 白名单功能
-    elif msg[0] == "0" and result.get("trip") in whiteList:
+    elif msg[0] == "0" and (trip_:=senderTrip) in whiteList:
         adm = msg[:5]
-        if adm == "0stu ":
-            thingsList[3] = eval(msg[5:])
-            chat.sendMsg("修改成功！")
-        if adm == "0add ":
-            whiteList.append(msg[5:11])
-            writeJson("info.json", info)
-            chat.sendMsg("添加成功！")
+        if adm == "0setu ":
+            try:
+                thingsList[3] = int(msg[5:])
+                chat.sendMsg("修改涩图开关成功！")
+            except ValueError:
+                chat.sendMsg("参数只能是数字！")
+        elif adm == "0addb ":
+            if bhash:=userHash.get(msg[5:11]):
+                if userTrip[msg[5:11]] in whiteList and trip_ != OWNER :
+                        chat.sendMsg("不能将白名单用户添加到黑名单里啊KORA！")
+                else:
+                    blackList.append(bhash)
+                    writeJson("info.json", info)
+                    chat.sendMsg("添加黑名单用户成功！")
+            else:
+                chat.sendMsg("当前在线的没有这个人！")
+        elif adm == "0delb ":
+            if (name:=msg[5:11]) in blackList:
+                blackList.remove(msg[5:11])
+                writeJson("info.json", info)
+                chat.sendMsg("删除黑名单用户成功！")
+            else:
+                chat.sendMsg("没有这个用户！")
+        elif trip_ == OWNER:
+            if adm == "0addw ":
+                whiteList.append(msg[5:11])
+                writeJson("info.json", info)
+                chat.sendMsg("添加白名单用户成功！")
+            elif adm == "0delw ":
+                if (name:=msg[5:11]) in whiteList:
+                    whiteList.remove(msg[5:11])
+                    writeJson("info.json", info)
+                    chat.sendMsg("删除白名单用户成功！")
+                else:
+                    chat.sendMsg("没有这个用户！")
 
     if len(allMsg) > 377:
         del allMsg[0]
     allMsg.append(this_turn)
 
-def join(chat, joiner: str, joinerHash: str, joinerTrip):
+def join(chat, joiner: str, joinerHash: str, joinerTrip: str):
     '''{
         'cmd': 'onlineAdd', 'nick': str, 'trip': str, 
         'uType': 'user', 'hash': str, 'level': 100, 
@@ -476,6 +571,7 @@ def join(chat, joiner: str, joinerHash: str, joinerTrip):
     print(joiner, "加入")
     userColor[joiner] = False
     userHash[joiner] = joinerHash
+    userTrip[joiner] = joinerTrip
     if names := data.get(joinerHash):
         if not joiner in names:
             print(f"此hash曾用名：{'，'.join(names)}")
@@ -503,18 +599,16 @@ def onSet(chat, nicks:list, users:list):
         'time': int
     }'''
     for i in users:
-        userColor[i["nick"]] = i["color"]
+        nick_ = i["nick"]
+        userHash[nick_] = i["hash"]
+        userColor[nick_] = i["color"]
+        userTrip[nick_] = i["trip"]
         if names := data.get(i["hash"]):
-            if not i["nick"] in names:
-                data[i["hash"]].append(i["nick"])
+            if not nick_ in names:
+                data[i["hash"]].append(nick_)
         else:
-            data[i["hash"]] = [i["nick"]]
+            data[i["hash"]] = [nick_]
     writeJson(FILENAME, data)
-    for i in users:
-        if hash_ := i.get("hash"):
-            userHash[i["nick"]] = hash_
-    del hash_
-    del names
     chat.sendMsg(PROLOGUE)
 
 def changeColor(chat, result:dict):
@@ -533,6 +627,7 @@ def changeColor(chat, result:dict):
 def leave(chat, leaver: str):
     del userColor[leaver]
     del userHash[leaver]
+    del userTrip[leaver]
 
 def whispered(chat, from_: str, msg: str, result: dict):
     chat.sendMsg(f"/w {from_} {reply(from_, msg)}")
@@ -711,12 +806,12 @@ class HackChat:
 
             # print(result)
             # 接收到消息
-            if cmd == "chat" and not rnick in blackList:
-               msgGot(self, result["text"], rnick, result)
+            if cmd == "chat" and not (result["hash"] in blackList or rnick == nick):
+               msgGot(self, result["text"], rnick, userTrip[rnick])
             # 有人加入时
             elif cmd == "onlineAdd":
                 self.online_users.append(rnick)
-                join(self, rnick, result["hash"], result.get("trip"))
+                join(self, rnick, result["hash"], result.get("trip", ""))
             # 有人离开时
             elif cmd == "onlineRemove":
                 self.online_users.remove(rnick)
