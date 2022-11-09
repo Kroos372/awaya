@@ -5,7 +5,8 @@
 重编写自[HackChat库](https://github.com/gkbrk/hackchat)。
 
 ### 特色
-~~特别色！~~咳咳，  
+~~特别色！~~  
+咳咳，  
 特色：有很多实用的功能（也许），有一个[很抽象的API](https://api.qingyunke.com/)，可以让你在聊天室下象棋（这个是重点~~虽然一般没人有空用~~）。
 
 ### 用法
@@ -29,7 +30,7 @@
 ### 其他
 WTFPL，  
 然后没了。  
-ᕕ( ᐛ )ᕗ
+玩得愉快祝你ᕕ(&ensp;ᐛ&ensp;)ᕗ~
 
 ## English ver.
 ### Introduction
@@ -49,4 +50,4 @@ Many functions, [funny chatting api](https://api.qingyunke.com/), can make you p
 ### Others
 WTFPL,  
 and all.  
-ᕕ( ᐛ )ᕗ  
+Have a good time ᕕ(&ensp;ᐛ&ensp;)ᕗ  
