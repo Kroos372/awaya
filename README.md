@@ -4,6 +4,10 @@
 一个普通的机器人，如今挂在DPG（\_）服务器上，在[https://hack.chat/?lounge](https://hack.chat/?lounge)中运行，  
 重编写自[HackChat库](https://github.com/gkbrk/hackchat)。
 
+### 特色
+~~特别色！~~咳咳，  
+特色：有很多实用的功能（也许），有一个[很抽象的API](https://api.qingyunke.com/)，可以让你在聊天室下象棋（这个是重点~~虽然一般没人有空用~~）。
+
 ### 用法
 0. 安装依赖库：websocket-client, requests, numpy。
 
@@ -31,6 +35,9 @@ WTFPL，
 ### Introduction
 A Normal BOT of hack.chat, runs in https://hack.chat/?lounge on DPG(\_)'s server currently,  
 Rewriten from [HackChat](https://github.com/gkbrk/hackchat)。
+
+### Featured
+Many functions, [funny chatting api](https://api.qingyunke.com/), can make you play Chinese chess in the chat room.  
 
 ### Usage
 0. Install dependent libraries: websocket-client, requests, numpy.  
