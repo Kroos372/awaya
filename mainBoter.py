@@ -151,7 +151,6 @@ MENU = [
     "|~prim 正整数 | 分解质因数 | ~prim 1234567890123 | 最多十七位数，超过会被自动截断 |",
     "|~rand 正整数|获取X个极为抽象的随机设计|~rand 1|来自[这里](https://protobot.org/#zh)，一次最多十件。 |",
     # "|insane| 发电实录 |insane| \\ |",
-    "|~bcol 颜色值|更改Bot颜色|~bcol f1ad9d|\\|",
 
     "|afk|标记自己为挂机状态，标记后发言时自动解除|afk 吃饭|借鉴自bo_od|",
     "|r|获取随机数|r 100|r后面若加空格与整数则代表取 1\\~该数字(含)或该数字（含）\\~1间的随机数，否则取1\\~1000间。|",
@@ -179,7 +178,8 @@ ADMMENU = [
     "|0setu 0或1|涩图开关，0关1开|0setu 1| 实际上是int后面的语句 |",
     "|0time 0或1|报时开关，同上|0time 0|同上|",
     "|0addb 昵称|添加黑名单用户（输入的是昵称，添加的是hash）|0addb coBad2| ==addb==lacklist user，不能将白名单用户添加进黑名单~~（你怎么敢的啊）~~ |",
-    f"|0delb 昵称|删除黑名单用户|0delb {OWNER}| \\ |"
+    f"|0delb 昵称|删除黑名单用户|0delb {OWNER}| \\ |",
+    f"|0bcol 颜色值|修改bot颜色值|0bcol aaaaaa| \\ |",
 ]
 OWNMENU = "\n".join([
     "只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
@@ -438,9 +438,6 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             digit = str(random.randint(1, 1000))
             eq = "\\*".join(getPrime(int(digit), []))
             chat.sendMsg(f"{digit}={eq}")
-    elif command == "~bcol ":
-        chat.sendMsg(f"/color {msg[6:]}")
-        chat.sendMsg("颜色修改成功！")
 
     elif msg.strip() == f"@{chat.nick}":
         if rans > 130:
@@ -546,8 +543,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 chat.sendMsg("参数只能是数字！")
         # 小黑屋是不值得学习的！
         elif adm == "0addb ":
-            if bhash:=userHash.get(msg[6:12]):
-                if userTrip[msg[6:12]] in whiteList and trip_ != OWNER :
+            if bhash:=userHash.get(msg[6:]):
+                if userTrip[msg[6:]] in whiteList and trip_ != OWNER :
                         chat.sendMsg("不能将白名单用户添加到黑名单里啊KORA！")
                 else:
                     blackList.append(bhash)
@@ -556,8 +553,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             else:
                 chat.sendMsg("当前在线的没有这个人！")
         elif adm == "0delb ":
-            if (name:=msg[6:12]) in blackList:
-                blackList.remove(msg[6:12])
+            if (name:=userHash[msg[6:]]) in blackList:
+                blackList.remove(name)
                 writeJson("userData.json", info)
                 chat.sendMsg("删除黑名单用户成功！")
             else:
@@ -568,6 +565,9 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 chat.sendMsg("修改报时开关成功！")
             except ValueError:
                 chat.sendMsg("参数只能是数字！")
+        elif command == "0bcol ":
+            chat.sendMsg(f"/color {msg[6:]}")
+            chat.sendMsg("颜色修改成功！")
         elif trip_ == OWNER:
             if adm == "0addw ":
                 whiteList.append(msg[6:12])
