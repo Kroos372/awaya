@@ -192,7 +192,7 @@ ENGMENU = "\n".join([
     "Here are all functions menu:",
     "|Command|Description|e.g.|Note|",
     "|:-:|:-:|:-:|:-:|",
-    "|~peep <integers>|View last <integers> history messages| <integers> up to 377.|",
+    "|~peep <integers>|View last <integers> history messages| ~peep 10| <integers> up to 377.|",
     f"|~colo <nickname>| Return <nickname>'s hex color value. | ~colo @{nick}| `@` can be omitted.|",
     f"|~hash <nickname>| Return history nicknames that <nickname> have used. | ~hash @{nick}| `@` can be omitted. |",
     "|~code <hashcode>| Return history nicknames of <hashcode>. | ~code abcdefg | Use `/myhash` to check your hashcode.|",
