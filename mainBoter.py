@@ -548,14 +548,14 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                         chat.sendMsg("不能将白名单用户添加到黑名单里啊KORA！")
                 else:
                     blackList.append(bhash)
-                    writeJson("userData.json", info)
+                    writeJson("userData.json", userData)
                     chat.sendMsg("添加黑名单用户成功！")
             else:
                 chat.sendMsg("当前在线的没有这个人！")
         elif adm == "0delb ":
-            if (name:=userHash[msg[6:]]) in blackList:
-                blackList.remove(name)
-                writeJson("userData.json", info)
+            if (hash_:=userHash[msg[6:]]) in blackList:
+                blackList.remove(hash_)
+                writeJson("userData.json", userData)
                 chat.sendMsg("删除黑名单用户成功！")
             else:
                 chat.sendMsg("没有这个用户！")
@@ -571,12 +571,12 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         elif trip_ == OWNER:
             if adm == "0addw ":
                 whiteList.append(msg[6:12])
-                writeJson("userData.json", info)
+                writeJson("userData.json", userData)
                 chat.sendMsg("添加白名单用户成功！")
             elif adm == "0delw ":
                 if (name:=msg[6:12]) in whiteList:
                     whiteList.remove(msg[6:12])
-                    writeJson("userData.json", info)
+                    writeJson("userData.json", userData)
                     chat.sendMsg("删除白名单用户成功！")
                 else:
                     chat.sendMsg("没有这个用户！")
