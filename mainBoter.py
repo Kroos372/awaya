@@ -149,7 +149,8 @@ MENU = [
     f"|~lost 昵称| 查看某人留下的话 | ~lost @{owner} | `@`可……你知道我要说什么 |",
     f"|~unlo 昵称| 清除留下的话 | ~unlt @{owner} | 请求清除者的识别码须和留言者一样。用完就扔是个好习惯哦~ |",
     "|~prim 正整数 | 分解质因数 | ~prim 1234567890123 | 最多十七位数，超过会被自动截断 |",
-    "|~rand 正整数|获取X个随机设计|~rand 1|来自[这里](https://protobot.org/#zh)，一次最多十件。 |",
+    "|~rand 正整数|获取X个极为抽象的随机设计|~rand 1|来自[这里](https://protobot.org/#zh)，一次最多十件。 |",
+    # "|insane| 发电实录 |insane| \\ |",
     "|~bcol 颜色值|更改Bot颜色|~bcol f1ad9d|\\|",
 
     "|afk|标记自己为挂机状态，标记后发言时自动解除|afk 吃饭|借鉴自bo_od|",
@@ -361,7 +362,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             chat.sendMsg("昵称不合法！")
         else:
             leftMsg[time.time()] = [sender, namePure(lis[1]), "".join(lis[2:])]
-            chat.sendMsg(f"@{sender}, @{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
+            chat.sendMsg(f"@{sender}, {lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
     elif command == "~peep ":
         try:
             if msg[6:] == "0":
