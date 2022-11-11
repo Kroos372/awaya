@@ -20,12 +20,12 @@
 		4. 加入的频道  
 		5. Bot颜色（可空）  
 		6. Bot主人名字  
-		7. 白名单识别码列表  
-		8. 黑名单hash列表  
-		9. Bot主人识别码  
-	*注：无需在白名单列表中添加主人识别码，只需要填写第九项就会自动设置。*  
+		7. Bot主人识别码  
 
-2. 运行[mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py)。
+2. 运行[mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py)。  
+
+4. 好好地对待她！  
+（偷偷加一句应该不会被主人发现吧@w@）
 
 ### 其他
 WTFPL，  
@@ -43,10 +43,12 @@ Many functions, [funny chatting api](https://api.qingyunke.com/), can make you p
 ### Usage
 0. Install dependent libraries: websocket-client, requests, numpy.  
 
-1. Customize [info.json](https://github.com/Kroos372/awaBot/blob/main/info.json):  
-	PS:You don't need to add owner's trip in whiteList, we will do that automatically.  
+1. Customize [info.json](https://github.com/Kroos372/awaBot/blob/main/info.json).
 
 2. Run [mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py).  
+
+4. Treat her well!  
+(Sneak it in... Won't be noticed by my master, right? @w@)
 ### Others
 WTFPL,  
 and all.  
