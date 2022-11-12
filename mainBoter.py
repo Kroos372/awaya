@@ -346,7 +346,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     useful = msg[:3]
     command = msg[:6]
 
-    if mes := afk.get(sender):
+    if (mes := afk.get(sender)) is not None:
         chat.sendMsg(f"@{sender} 不再{mes}了，欢迎回来~~摸鱼~~！")
         del afk[sender]
     if msg.lower() == "afk":
@@ -400,17 +400,17 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         except ValueError:
             chat.sendMsg(f"/w {sender} 然而peep后面需要一个非零整数")
     elif command == "~welc ":
-        if (text := msg[6:])[0] == "/":
+        if (text := msg[6:])[:1] == "/":
             chat.sendMsg("诶！你想干什么？真是坏心眼~")
-        elif (trip := senderTrip):
-            userData["welText"][trip] = text
+        elif senderTrip:
+            userData["welText"][senderTrip] = text
             writeJson("userData.json", userData)
-            chat.sendMsg(f"为识别码{trip}设置欢迎语成功了！")
+            chat.sendMsg(f"为识别码{senderTrip}设置欢迎语成功了！")
         else:
             chat.sendMsg("您当前还没有识别码，请重进并在昵称输入界面使用==昵称#密码==设置一个！")
     elif msg == "~welc":
-        if senderTrip in userData["lastText"]:
-            del userData["welText"][trip]
+        if senderTrip in userData["welText"]:
+            del userData["welText"][senderTrip]
             writeJson("userData.json", userData)
             chat.sendMsg(f"为识别码{trip}清除欢迎语成功了！")
         else:
@@ -674,8 +674,7 @@ def join(chat, joiner: str, joinerHash: str, joinerTrip: str):
     else:
         data[joinerHash] = [joiner]
         writeJson(FILENAME, data)
-        
-    for k, v in leftMsg.items():
+    for k, v in leftMsg.copy().items():
         if joiner == v[1]:
             chat.sendMsg(f"/w {joiner} {v[0]}曾在（{time.ctime(k)}）给您留言：{v[2]}")
             del leftMsg[k]
