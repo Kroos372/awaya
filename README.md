@@ -1,7 +1,7 @@
-﻿# AWABOT!
+# AWABOT!
 ## Chinese ver.
 ### 介绍
-一个普通的机器人，如今挂在DPG（\_）服务器上，在[https://hack.chat/?lounge](https://hack.chat/?lounge)中运行，  
+一个普通的机器人，如今挂在DPG（\_）服务器上，在[https://hack.chat/?lounge](https://hack.chat/?lounge)中运行，出现任何BUG了也都可以来这找我。  
 重编写自[HackChat库](https://github.com/gkbrk/hackchat)。
 
 ### 特色
