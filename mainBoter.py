@@ -70,7 +70,7 @@ RANDLIS = [
     ["呜呜呜……", "可是……作为Bot的话……闭嘴后不就毫无意义了吗……", "sender……你也不想被知道欺负小朋友吧...", "就不闭就不闭，啦啦啦(～￣▽￣)～",
     "你可以试试？", "嘴巴不要可以捐献给我XD"], #17
     ["啊对对对。", "滋滋滋滋滋滋滋……", "我不要被开源我不要被开源我不要aaaaaaaaaa", "你有没有觉得这样就像看着我的……", "0.0", "我选词填空就对一个。",
-    "永远不会让你上！", "我我我我我……", "差点把牛奶盖子吃了。", "我想把我的头打开。", "从前一直就是一个一个一个啊啊啊，就像是晃来晃去的闪烁的吊灯。"], #18
+    "永远不会让你上！", "我我我我我……", "差点把牛奶盖子吃了。", "我想把我的头打开。", "从前一直就是一个一个一个啊啊啊，就像是晃来晃去的闪烁的吊灯。", "去年夏天后就再没聊过天~"], #18
     replys[1], #19
 ]
 del replys
@@ -112,7 +112,7 @@ MENU = [
     "|:-:|:-:|:-:|:-:|",
     "|~peep 整数|浏览历史的X条消息|~peep 10|目前最多存377条~~，因为不想存太多而且存太多大概也发不出去吧~~|",
     f"|~colo 昵称|查看某人的颜色值 | ~colo @{nick}| `@`可省略~~用colo而非color只是为了让所有命令字数一致~~|",
-    f"|~hash 昵称|查看在线的某人的历史昵称 | ~hash @{nick}| `@`可省略|",
+    f"|~hash 昵称|查看某人的历史昵称 | ~hash @{nick}| `@`可省略|",
     "|~code hash码| 查看某hash的历史昵称| ~code abcdefg | 可使用`/myhash`查看自己的hash码|",
     f"|~left 昵称 文本|留言，在昵称上线时将您的话传达给ta|~left @{nick} hello world|借鉴自[3xi573n7ivli5783vR](?math)，`@`可省略~~如果在你要留言的人上线之前bot下线了的话肯定就没办法……~~|",
     "|~welc 文本| 为当前识别码设置/清除欢迎语 | ~welc ᕕ( ᐛ )ᕗ | 自eebot。按照识别码储存!要清除的话单独发送~welc |",
@@ -166,7 +166,7 @@ ENGMENU = [
     "|:-:|:-:|:-:|:-:|",
     "|~peep <integers>|View last <integers> history messages| ~peep 10| <integers> up to 377.|",
     f"|~colo <nickname>| Return <nickname>'s hex color value. | ~colo @{nick}| `@` can be omitted.|",
-    f"|~hash <nickname>| Return history nicknames of <nickname> that is online. | ~hash @{nick}| `@` can be omitted. |",
+    f"|~hash <nickname>| Return history nicknames of <nickname>. | ~hash @{nick}| `@` can be omitted. |",
     "|~code <hashcode>| Return history nicknames of <hashcode>. | ~code abcdefg | Use `/myhash` to check your hashcode.|",
     "|~left <nickname> <message> | Leave a message for <nickname>, <message> will be whispered to him/her when he/she join" +
     f"the channel|~left @{nick} hello world| `@` can be omitted. |",
@@ -261,9 +261,22 @@ def getPrime(i, factors) -> list:
     factors.append(str(i))
     return factors
 def hashByCode(code: str) -> str:
-    if names := data.get(code):
-        return "，".join(names)
-    return "不存在这个hash码"
+    try:
+        return "，".join(data[code])
+    except:
+        return "不存在这个hash码"
+def hashByName(name: str, now: bool=False) -> str:
+    if now:
+        try:
+            return hashByCode(userHash[name])
+        except:
+            return "此人当前不在线！"
+    else:
+        l = []
+        for i in data.values():
+            if name in i:
+                l.append("，".join(i))
+        return "\n".join(l) or "没有这个名字！"
 # 一天不涩涩，癫痫发作作
 def colorPic() -> str:
     setu = requests.get("https://api.lolicon.app/setu/v2").json()["data"][0]
@@ -330,7 +343,12 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 break
     if command == "~hash ":
         if (name := namePure(msg[6:])) != chat.nick:
-            chat.sendMsg(hashByCode(userHash.get(name, "")))
+            chat.sendMsg(hashByName(name))
+        else:
+            chat.sendMsg("不、告、诉、你~")
+    if command == "~hasn ":
+        if (name := namePure(msg[6:])) != chat.nick:
+            chat.sendMsg(hashByName(name, True))
         else:
             chat.sendMsg("不、告、诉、你~")
     elif command == "~code ":
@@ -606,7 +624,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 else:
                     chat.sendMsg("好消息是他/她的信息本来就被记录着~")
             elif adm == "0relo ":
-                if (ind:=adm[6:]) == "0":
+                if (ind:=msg[6:]) == "0":
                     with open(FILENAME, encoding="utf8") as f:
                         global data
                         data = json.load(f)
