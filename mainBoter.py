@@ -31,7 +31,7 @@ OWNER = info["ownerTrip"]
 whiteList = userData["whiteList"] + [OWNER] if not OWNER in userData["whiteList"] else userData["whiteList"]
 # 黑名单：不回复
 blackList= userData["blackList"]
-black = userData["blackName"] + [nick] if not nick in userData["blackName"] else userData["blackName"]
+blackName = userData["blackName"] + [nick] if not nick in userData["blackName"] else userData["blackName"]
 # 在这的变量和在thingsList里的区别是，在这里的变量都不需要直接改变，只在原来基础上增删；
 # 在thingsList中的则需要，例如游戏中的hash和摇出的数字都会在结算中清空，储存在一个列表中就避免了各种莫名其妙的作用域问题
 allMsg, afk, leftMsg, redBlack, ignored = [], {}, {}, [None, None], userData["ignored"]

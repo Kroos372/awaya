@@ -1,6 +1,6 @@
 ﻿{
   "welText": {
-    "coBad2": "ᕕ( ᐛ )ᕗ"
+    "coBad2": "ᕕ( ᐛ )ᕗ",
   },
   "lastText": {
     "Krs_": [
@@ -11,5 +11,6 @@
   "engUsers": [],
   "ignored": [],
   "blackList": [],
+  "blackName": [],
   "whiteList": []
 }
