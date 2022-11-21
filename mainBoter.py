@@ -429,7 +429,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             if 10 < digit or digit < 1: raise ValueError
             chat.sendMsg(randomDesign(digit))
         except ValueError: chat.sendMsg("参数必须是1到10之间的正整数！")
-    elif commad == "rollen":
+    elif command == "rollen":
         digit = msg[7:]
         try: chat.sendMsg(rollTo1(digit))
         except ValueError as e: chat.sendMsg(rollTo1(1000))
