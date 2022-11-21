@@ -550,6 +550,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg("删除黑名单用户成功！")
                 else: chat.sendMsg("这人不在小黑屋里哦？")
+            except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
         elif command == "0addn ":
             try:
                 if not (name:=namePure(msg[6:])) in blackName:
