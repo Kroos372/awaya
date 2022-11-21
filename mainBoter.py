@@ -1,5 +1,5 @@
 #coding=utf-8
-import json, time, websocket, ssl, random, requests, re, threading, os
+import json, time, websocket, ssl, random, requests, re, threading, traceback
 import numpy as np
 
 # 莫名其妙的编码问题，很让我头疼啊~
@@ -268,7 +268,7 @@ def getPrime(i, factors) -> list:
     return factors
 # r来r去
 def rollTo1(maxNum: int=1000) -> str:
-    maxNum, road = maxNum, []
+    road =  []
     while True:
         road.append(str(ran:=random.randint(1, maxNum)))
         if ran != 1:
@@ -431,7 +431,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         except ValueError: chat.sendMsg("参数必须是1到10之间的正整数！")
     elif command == "rollen":
         digit = msg[7:]
-        try: chat.sendMsg(rollTo1(digit))
+        try: chat.sendMsg(rollTo1(int(digit)))
         except ValueError as e: chat.sendMsg(rollTo1(1000))
     elif command == "rprime":
         digit = msg[7:20]
@@ -920,6 +920,8 @@ class HackChat:
                         thingsList[8] = False
         # 坏心眼……
         except BaseException as e:
+            with open(f"{time.time()}.txt", "w", encoding="utf8") as f:
+                f.write(traceback.format_exc())
             self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}")
             self.run()
 
