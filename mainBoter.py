@@ -364,8 +364,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     if command == "~hasn ": chat.sendMsg(hashByName(namePure(msg[6:]), True))
     elif command == "~code ": chat.sendMsg(hashByCode(msg[6:]))
     elif command == "~colo ":
-        if (color := userColor.get(msg[6:])) is not None:
-            if color: chat.sendMsg(namePure(color))
+        if (color := userColor.get(namePure(msg[6:]))) is not None:
+            if color: chat.sendMsg(color)
             else: chat.sendMsg("该用户还没有设置颜色！")
         else: chat.sendMsg("没有这个用户！")
     elif command == "~left ":
@@ -912,7 +912,7 @@ class HackChat:
                     # 有新人来！
                     elif cmd == "onlineAdd":
                         self.onlineUsers.append(rnick)
-                        join(self, rnick, result["hash"], result.get("trip", ""), result.get("trip", ""))
+                        join(self, rnick, result["hash"], result.get("trip", ""), result.get("color", ""))
                     # 有人离开……
                     elif cmd == "onlineRemove":
                         self.onlineUsers.remove(rnick)
