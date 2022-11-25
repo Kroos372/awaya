@@ -28,13 +28,12 @@ channel, nick, passwd, color, owner, called = info["channel"], info["nick"], inf
 # 主人：我无所不能的卡密哒！
 OWNER = info["ownerTrip"]
 # 白名单用户功能：清除任何人留言，涩图开关，设置黑名单，私信~hash
-whiteList = userData["whiteList"] + [OWNER] if not OWNER in userData["whiteList"] else userData["whiteList"]
+whiteList = userData["whiteList"]
 # 黑名单：不回复
-blackList= userData["blackList"]
-blackName = userData["blackName"] + [nick] if not nick in userData["blackName"] else userData["blackName"]
+blackList, blackName = userData["blackList"], userData["blackName"]
 # 在这的变量和在thingsList里的区别是，在这里的变量都不需要直接改变，只在原来基础上增删；
 # 在thingsList中的则需要，例如游戏中的hash和摇出的数字都会在结算中清空，储存在一个列表中就避免了各种莫名其妙的作用域问题
-allMsg, afk, leftMsg, redBlack, ignored = [], {}, {}, [None, None], userData["ignored"]
+allMsg, afk, leftMsg, redBlack, ignored, banned = [], {}, {}, [None, None], userData["ignored"], []
 userHash, userTrip, userColor, engUsers = {}, {}, {}, userData["engUsers"]
 
 CLOLUMN, LETTERS = ["| \\ |1|2|3|4|5|6|7|8|9|", "|-|-|-|-|-|-|-|-|-|-|"], list("ABCDEFGHIJ")
@@ -165,6 +164,8 @@ OWNMENU = "\n".join([
     f"|0igno 昵称|不记录某人消息|0igno @{owner}| `@`，省略，懂？最好在真心话的时候用。 |",
     f"|0unig 昵称|记录某人信息|0unig @{owner}| 同上 |",
     "|0stfu 0或1| 1为休眠，使bot不回复任何信息，0为取消休眠 | 0stfu | 刷屏什么的去死好了。 |",
+    "|0bans 昵称| 封禁某人，和kill一样，但会持续 | 0bans abcd | \\ |",
+    "|0uban 昵称| 取消封禁某人 | 0uban abcd | \\ |",
     "|0close|关闭bot|0close|没用|",
 ])
 ENGMENU = [
@@ -541,6 +542,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             try:
                 if not (hash_:=userHash[namePure(msg[6:])]) in blackList:
                     blackList.append(hash_)
+                    writeJson("userData.json", userData)
                     chat.sendMsg("好好好，又进去了一个。")
                 else: chat.sendMsg("可惜他/她已经在咯~")
             except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
@@ -556,6 +558,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             try:
                 if not (name:=namePure(msg[6:])) in blackName:
                     blackName.append(name)
+                    writeJson("userData.json", userData)
                     chat.sendMsg("好好好，又进去了一个。")
                 else: chat.sendMsg("可惜他/她已经在咯~")
             except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
@@ -583,6 +586,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             if command == "0addw ":
                 if not (name:=msg[6:12]) in whiteList:
                     whiteList.append(name)
+                    writeJson("userData.json", userData)
                     chat.sendMsg("添加特殊服务的家伙咯~")
                 else:
                     chat.sendMsg("你要找的人并不在这里面~")
@@ -607,6 +611,18 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     chat.sendMsg(f"恢复记录{name}的消息成功了~")
                 else:
                     chat.sendMsg("好消息是他/她的信息本来就被记录着~")
+            elif command == "0bans ":
+                if not (name:=namePure(msg[6:])) in banned:
+                    banned.append(name)
+                    chat.sendMsg(f"好好好！")
+                else:
+                    chat.sendMsg("他/她已经被封了！")
+            elif command == "0uban ":
+                if (name:=namePure(msg[6:])) in banned:
+                    banned.remove(name)
+                    chat.sendMsg(f"好好好！")
+                else:
+                    chat.sendMsg("他/她还没有被封哦！")
             elif command == "0relo ":
                 if (ind:=msg[6:]) == "0":
                     with open(FILENAME, encoding="utf8") as f:
@@ -650,11 +666,8 @@ def join(chat, joiner: str, hash_: str, trip: str, color: str):
     }'''
     msg = dic[trip] if trip in (dic:=userData["welText"]) else random.choice(
         RANDLIS[5]).replace("joiner", joiner)
-    chat.sendMsg(msg)
     print(joiner, "加入")
-    userColor[joiner] = color
-    userHash[joiner] = hash_
-    userTrip[joiner] = trip
+    userColor[joiner], userHash[joiner], userTrip[joiner] = color, hash_, trip
     if names := data.get(hash_):
         if not joiner in names:
             print(f"此hash曾用名：{'，'.join(names)}")
@@ -667,6 +680,8 @@ def join(chat, joiner: str, hash_: str, trip: str, color: str):
         if joiner == v[1]:
             chat.sendMsg(f"/w {joiner} {v[0]}曾在（{time.ctime(k)}）给您留言：{v[2]}")
             del leftMsg[k]
+    if joiner in banned: chat.sendMsg(f"/w {joiner} "+"$\\rule{999999em}{99999999em}$")
+    else: chat.sendMsg(msg)
 
 def onSet(chat, nicks: list, users: list):
     '''{

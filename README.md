@@ -26,9 +26,11 @@
 		8. 自称（中文名）
 		9. 镑15便士
 
-3. 运行[mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py)。  
+3. 运行[init.py](https://github.com/Kroos372/awaBot/blob/main/init.py)。
 
-5. 好好地对待她！  
+4. 运行[mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py)。  
+
+6. 好好地对待她！  
 （偷偷加一句应该不会被主人发现吧@w@）
 
 ### 其他
@@ -49,9 +51,11 @@ Many functions, [funny chatting api](https://api.qingyunke.com/), can make you p
 
 2. Customize [info.json](https://github.com/Kroos372/awaBot/blob/main/info.json).
 
-3. Run [mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py).  
+3. Run [init.py](https://github.com/Kroos372/awaBot/blob/main/init.py)。
 
-5. Treat her well!  
+4. Run [mainBoter.py](https://github.com/Kroos372/awaBot/blob/main/mainBoter.py).  
+
+6. Treat her well!  
 (Sneak it in... Won't be noticed by my master, right? @w@)
 ### Others
 WTFPL,  
