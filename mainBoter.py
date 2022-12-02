@@ -1,5 +1,5 @@
 #coding=utf-8
-import json, time, websocket, ssl, random, requests, re, threading, traceback, sys
+import json, time, websocket, ssl, random, requests, re, threading, traceback, sys, os
 import numpy as np
 
 # 莫名其妙的编码问题，很让我头疼啊~
@@ -24,10 +24,12 @@ with open("reply.json", encoding="utf8") as f:
 
 # [0象棋开关, 1轮到谁, 2结束游戏的人, 3涩图开关, 4真心话开关, 5报时开关, 6{昵称：摇出的数字}, 7[玩游戏中的hash], 8休眠开关]
 thingsList = [False, None, None, False, False, True, {}, [], False]
+# [0炸弹数字, 1在玩的人, 2轮到序号, 3初始最小值, 4初始最大值, 5是否在玩, 6本轮最小值, 7本轮最大值]
+bombs = [0, [], 0, 1, 1000, False, 1, 1000]
 channel, nick, passwd, color, owner, called = info["channel"], info["nick"], info["passwd"], info["color"], info["owner"], info["called"]
 # 主人：我无所不能的卡密哒！
 OWNER = info["ownerTrip"]
-# 白名单用户功能：清除任何人留言，涩图开关，设置黑名单，私信~hash
+# 白名单
 whiteList = userData["whiteList"]
 # 黑名单：不回复
 blackList, blackName = userData["blackList"], userData["blackName"]
@@ -42,10 +44,10 @@ PROLOGUE = info["PROLOGUE"]
 # 自定义回复，包含了主人对我的满满心意，诶嘿嘿~
 RANDLIS = [
     [f"找{owner}去吧。", "早上好！", "干什么?", "想下象棋吗？发送菜单看看？", "好好好~", "有什么吩咐~", "sender寂寞了吧", "发送菜单了解我的功能~", "怎么了？",
-    "![](https://i.gyazo.com/eab45f465ed035c58c8595159eb9f6e2.gif)", "在这在这~", "@sender"],#0
-    ["sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "是这样的", "/me awa"],#1
+    "![](https://i.gyazo.com/eab45f465ed035c58c8595159eb9f6e2.gif)", "在这在这~", "@sender", "Hello", "Yes?"],#0
+    ["sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "是这样的", "/me awa", "你说得对", "违法内容，请终止当前话题。"],#1
     ["有", "嗯（冷漠）", "没", "sender不会是寂寞了吧", "人……人……有吧？", "你叫一声？"],#2
-    ["拜", "bye~", "下次再来啊~", "等着你哦", "别忘了这里哦~"],#3
+    ["拜", "bye~", "下次再来啊~", "等着你哦", "别忘了这里哦~", "see u"],#3
     ["也没有那么傻", "知道了知道了", "没想到sender意外地有自知之明呢", "啊对对对", "智将（确信）", "没活整可以咬打火机。", "正确的", "我就知道"],#4
     ["hi, joiner", "hello, joiner", "joiner!", "Sup", "joiner! Hows ur day?", "出现了，joiner!", "这不是joiner吗~", "你好诶，joiner，新的一天也要加油哦！", "Welcome, joiner!",
      "好久不见啊，joiner~", "早上好，joiner!"],#5
@@ -66,12 +68,14 @@ RANDLIS = [
     "伤心的话就去睡一觉吧！找找你喜欢做的事情，你的兴趣所在，回想回想开心的瞬间……都会过去的，sender，不要担心，不要难过了。", "如果是为了别人的话可能真的不值得呢……啊，我的意思是我们有时候也应该考虑考虑自己，不是吗？"],#14
     ["蛤？你是想问有多少机器人吗？鬼能数的清啊！如果你没那么强迫症的话倒可以去问问eb……", "什么？你也想做一个？呃算了，劝你别那么想……呃，不过如果真的想做的话谁也拦不住吧...好吧，你开心就好（苦笑）……算了，开玩笑的，你想做就做吧，随便问谁都行~", 
     "机器人啊，现在已经是机器人的时代了吗？啊哈哈，开玩笑，只是不断进步的时代和快速涌现的各种机器人也让人感到一种危机感啊……现在机器人也要卷啊，不过也许过不了多久，这里就真的是机器人的天下了……因为好制作呗，而且没有"+
-    "人会管你做的质量怎么样，你要是放上来了基本就没谁能拿走了。你懂我意思吧？你懂。但还是得以乐观的心态看看吧……", "我不是机器人，再问自杀。", "你要不要检查检查？"],#15
-    ["没活了可以咬打火机。", "理论上说，所谓的无聊都只是懒而已。", "学习，做一些自己感兴趣的事情？", "错误的", "给大家整个活：", "发电发电！", "紫砂吧。", "好好好"], #16
+    "人会管你做的质量怎么样，你要是放上来了基本就没谁能拿走了。你懂我意思吧？你懂。但还是得以乐观的心态看看吧……", "我不是机器人，再问自杀。", "你要不要检查检查？", "也许我们都是一样的。"],#15
+    ["没活了可以咬打火机。", "理论上说，所谓的无聊都只是懒而已。", "学习，做一些自己感兴趣的事情？", "错误的", "给大家整个活：", "发电发电！", "紫砂吧。", "好好好", "陪我玩。", "真的假的"], #16
     ["呜呜呜……", "可是……作为Bot的话……闭嘴后不就毫无意义了吗……", "sender……你也不想被知道欺负小朋友吧...", "就不闭就不闭，啦啦啦(～￣▽￣)～",
     "你可以试试？", "嘴巴不要可以捐献给我XD"], #17
-    ["啊对对对。", "滋滋滋滋滋滋滋……", "我不要被开源我不要被开源我不要aaaaaaaaaa", "你有没有觉得这样就像看着我的……", "0.0", "我选词填空就对一个。",
-    "永远不会让你上！", "我我我我我……", "差点把牛奶盖子吃了。", "我想把我的头打开。", "从前一直就是一个一个一个啊啊啊，就像是晃来晃去的闪烁的吊灯。", "去年夏天后就再没聊过天~"], #18
+    ["啊对对对。", "滋滋滋滋滋滋滋……", "我不要被开源我不要被开源我不要aaaaaaaaaa", "你有没有觉得这样就像看着我的……", "0.0", "我选词填空就对一个。", "八辈子没吃过人肉了，", "放生羊会梦见垫子人吗？", "你AP了，就一定AP了吧！"
+    "永远不会让你上！", "我我我我我……", "差点把牛奶盖子吃了。", "我想把我的头打开。", "从前一直就是一个一个一个啊啊啊，就像是晃来晃去的闪烁的吊灯。", "去年夏天后就再没聊过天~", "该给你看什么呢（翻）", "为什么就挑起disco了呢！",
+    "不错的回复，即使是我也能感到心潮澎湃。", "你的思想是古老的，躯体却是现代的。你到底是什么人？", "要交妄想税的。", "我超！", "我去，我喜欢跳舞！", "我很荣幸能在这里在这里。", "It's a part of me apart from me.",
+    "不错的，像母亲的手抚摸着你。", "哈哈，救救我。", "很少吧，很少对吧？是这样的。", "Just !@#$%^&*()", "给我玩明日方舟。"], #18
     replys[1], #19
 ]
 del replys
@@ -92,6 +96,16 @@ CCMENU = "\n".join([
     "`@Bot名 帮助`：显示这一段话~~，也就是套娃啦！~~",
     "芜湖，就这么多了，虽然我也知道我很棒不过毕竟人的能力是有限的嘛~但放心，我每天都在努力学习，也许明天，下个小时或者下一分钟，\
     在你不注意的时候，我就有新功能啦，ᕕ( ᐛ )ᕗ\\~"
+])
+BOMBMENU = "\n".join([
+    "/w sender 数字炸弹——",
+    "规则很简单，在一个给定的范围中设某个数字为「炸弹」，玩家轮流猜数缩小范围，直到某人猜到炸弹。以下是关于数字炸弹的命令：",
+    "`bomber` : 加入数字炸弹游戏！",
+    "`*bom` : 让机器人加入！",
+    "`开始b` : 开始数字炸弹，至少需要两个人。",
+    "`结束b` : 结束数字炸弹……",
+    "`b 数字` : 猜数。",
+    "就是这么多了，祝你好运，ᕕ( ᐛ )ᕗ\\~"
 ])
 INIT=np.array([
     [RED[0], RED[1], RED[2], RED[3], RED[4], RED[3],RED[2], RED[1], RED[0]],
@@ -129,8 +143,10 @@ MENU = [
     "|rollen|反复r，将r到的数作为最大值继续r，直到1|rto1 9999|后面加参数表示初始最大值，如果不设则为1000|",
     "|rprime|获取随机数并分解质因数|rprim 999|规则与~prim, r相同~~质因数分解玩魔怔了~~|",
     "|listwh|列出白名单识别码|listwh|==list wh==itelist users|",
+    "|listbl|列出黑名单名字|listbl|==list bl==acklist users|",
     f"|@bot名 文本|聊天|@{nick} help| API来自[青云客](https://api.qingyunke.com/)~~也有一部分是我主人亲笔写的~~|",
     f"|@bot名 帮助|象棋bot的帮助|@{nick} 帮助|象棋！|",
+    f"|@bot名 数字炸弹| 数字炸弹bot的帮助|@{nick} 数字炸弹|好玩|",
     "|menu|Return English version of this menu. |menu|\\|",
 ]
 MENUFT = [
@@ -151,11 +167,12 @@ ADMMENU = [
     "|0setu 0或1|涩图开关，0关1开|0setu 1| 实际上是int后面的语句 |",
     "|0time 0或1|报时开关，同上|0time 0|同上|",
     "|0kill 昵称|向某人发送一个很大很大的长方形来让他不得不重进|0kill qaq|需要注意的是这只有在对方开启LaTeX的情况下才有用、|",
-    f"|0addb 昵称|添加黑名单用户（输入的是昵称，添加的是hash）|0addb {owner}| ==addb==lacklist user，不能将白名单用户添加进黑名单~~（你怎么敢的啊）~~ |",
+    f"|0addb 昵称|添加黑名单用户（输入的是昵称，添加的是hash）|0addb {owner}| ==addb==lacklist user|",
     f"|0delb 昵称|删除黑名单用户|0delb {owner}| \\ |",
-    f"|0addn 昵称|添加黑名单昵称|0addb {owner}| 同上 |",
-    f"|0deln 昵称|删除黑名单昵称|0addb {owner}| 同上 |",
+    f"|0addn 昵称|添加黑名单昵称|0addn {owner}| 同上 |",
+    f"|0deln 昵称|删除黑名单昵称|0deln {owner}| 同上 |",
     f"|0bcol 颜色值|修改bot颜色值|0bcol aaaaaa| \\ |",
+    f"|0setb 最小值 最大值|设置数字炸弹的最小值与最大值|0setb 1 100| \\ |",
 ]
 OWNMENU = "\n".join([
     "只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
@@ -166,7 +183,7 @@ OWNMENU = "\n".join([
     "|0stfu 0或1| 1为休眠，使bot不回复任何信息，0为取消休眠 | 0stfu | 刷屏什么的去死好了。 |",
     "|0bans 昵称| 封禁某人，和kill一样，但会持续 | 0bans abcd | \\ |",
     "|0uban 昵称| 取消封禁某人 | 0uban abcd | \\ |",
-    "|0close|关闭bot|0close|没用|",
+    "|0remake| 重启 |0remake|restart太长了|",
 ])
 ENGMENU = [
     "Here are all functions menu:",
@@ -184,12 +201,13 @@ ENGMENU = [
     f"|~unlo <nickname> | Clear the message that u left by `~last` | ~unlt @{owner} | <nickname>'s trip must be as same as yours. |",
     "|~prim <digit> | Decomposing prime factors for <digit>. | ~prim 1234567890123 | Up to 13 digits, more than that will be automatically cut off. |",
     "|~rand <digit>|Get <digit> kinda random designs|~rand 1|API from [HERE](https://protobot.org/#zh), <digit> up to 10|",
-    "|~bcol <hex color value>|Change bot's color|~bcol f1ad9d|\\|",
 
     "|afk| Mark yourself as afk, automatically unmark the next time you say sth. |afk sleeping| AFK(Away From Keyboard) |",
     "|r| Get a random number. |r 100| if r followed by a space and an integer, return a random number between 1 to that integer" +
     "(include) or that integer(include) to 1, else return random number between 1 to 1000. |",
     "|rprime| Decomposing prime factors for a random number. |rprim 9999| Rules are as same as `r` + `~prim` |",
+    "|rollen| Repeatedly generate random numbers until 1. | rollen 9999 | Rules same. |",
+    "|listwh| List whitelist trips. | listwh |==list wh==itelist users|",
     f"|@<botname> <message> | Chat in Chinese with bot. | @{nick} help | API from [HERE](https://api.qingyunke.com/). |",
     f"|@<botname> 帮助| Help message of Chinese Chess Bot. | @{nick} 帮助| \\ |",
     "|真心话| Start a Truth ~~or Dare~~ game. | 真心话 | \\ |",
@@ -212,8 +230,10 @@ ENGADMMENU = [
     "|:-:|:-:|:-:|:-:|",
     "| 0setu 0 or 1 | Picture switch | 0setu 1 | `int()` is what program actually done |",
     "| 0time 0或1 | Chime switch | 0time 0 | Ibid |",
-    f"| 0addb <nick> | Add blacklist user.(hash) |0addb {owner}| Can't append whitelist user into blacklist!(How dare you) |",
+    f"| 0addb <nick> | Add blacklist user.(hash) |0addb {owner}| \\ |",
     f"| 0delb <nick> | Delete blacklist user. |0delb {owner}| \\ |",
+    f"|0addn <nick> | Add blacklist name.|0addn {owner}| \\ |",
+    f"|0deln <nick> |Delete blacklist name.|deln {owner}| \\ |",
     f"| 0bcol <hex color value> | Change bot's color |0bcol aaaaaa| \\ |",
 ]
 ENGOWNMENU = "\n".join([
@@ -223,6 +243,9 @@ ENGOWNMENU = "\n".join([
     f"|0igno <nickname> | Stop recording sb.'s message. |0igno @{owner}| `@` can be... |",
     f"|0unig <nickname>| Start to record sb.'s message. |0unig @{owner}| Ibid |",
     "|0stfu 0 or 1 | 1 means sleep, let bot not reply any messages, 0 cancel it. | 0stfu | \\ |",
+    "|0bans <nick>| Ban someone by LaTeX. | 0bans abcd | \\ |",
+    "|0uban <nick> | Unban someone. | 0uban abcd | \\ |",
+    "|0remake| Restart. |0remake| \\ |",
 ])
 GAMEMENU = "\n".join([
     "真心话现在开始啦，发送*r*来获取随机数，*结算*来结算，*结束游戏*来结束游戏~",
@@ -306,6 +329,29 @@ def colorPic() -> str:
     title = setu["title"]
     author = setu["author"]
     return f"{url}\n标题：{title}\n标签：{','.join(tags)}\n作者：{author}"
+# 结束
+def endBomb():
+    bombs[5], bombs[2], bombs[1] = False, 0, []
+    bombs[6], bombs[7] = bombs[3], bombs[4]
+# 判断数字与更新
+def bombRule(chat, num=None):
+    old = bombs[1][bombs[2]]
+    if old == nick:
+        num = random.randint(bombs[6], bombs[7])
+    if bombs[6] > num or bombs[7] < num:
+        return chat.sendMsg(f"不符合规则，数字必须在{bombs[6]}到{bombs[7]}之间！（含两边）")
+    elif bombs[0] > num:
+        bombs[6] = num + 1
+    elif bombs[0] < num:
+        bombs[7] = num - 1
+    else:
+        endBomb()
+        return chat.sendMsg(f"炸弹炸到{old}了！")
+    bombs[2] = (bombs[2] + 1) % len(bombs[1])
+    player = bombs[1][bombs[2]]
+    chat.sendMsg(f"{old}没有踩中！\n现在炸弹范围为{bombs[6]}到{bombs[7]}，轮到@{player} 了！")
+    if player == nick:
+        bombRule(chat)
 
 def reply(sender: str, msg: str) -> str:
     """我该如何回复大家呢？"""
@@ -447,11 +493,11 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             eq = "\\*".join(getPrime(int(digit), []))
             chat.sendMsg(f"{digit}={eq}")
 
-    elif msg.strip() == f"@{chat.nick}":
+    elif msg.strip() == f"@{nick}":
         if rans > 129: chat.sendMsg(random.choice(RANDLIS[6]).replace("sender", sender))
         else: chat.sendMsg(random.choice(RANDLIS[0]).replace("sender", sender))
-    elif msg[:len(chat.nick)+2] == f"@{chat.nick} " :
-        chat.CCreply(sender, msg[len(chat.nick)+2:])
+    elif msg[:len(nick)+2] == f"@{nick} " :
+        chat.CCreply(sender, msg[len(nick)+2:])
     elif msg == "r":
         ranNum = random.randint(1, 1000)
         if thingsList[4]:
@@ -465,11 +511,11 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 thingsList[7].append(hashCode)
         else: chat.sendMsg(str(ranNum))
     elif msg[:2] == "r ":
-        try:
-            beR = int(msg[2:])
+        try: beR = int(msg[2:])
+        except: chat.sendMsg(str(random.randint(1, 1000)))
+        else:
             if beR > 1: chat.sendMsg(str(random.randint(1, beR)))
             else: chat.sendMsg(str(random.randint(beR, 1)))
-        except: chat.sendMsg(str(random.randint(1, 1000)))
     elif msg == "结算":
         if thingsList[4]:
             if len(thingsList[7]) < 2: chat.sendMsg("有句话叫什么，一个巴掌拍不响？")
@@ -493,6 +539,34 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     elif msg == "涩图":
         if thingsList[3]: chat.sendMsg(colorPic())
         else: chat.sendMsg("害，别惦记你那涩涩了。")
+    elif msg[:2] == "b " and bombs[5] and sender == bombs[1][bombs[2]]:
+        try: num = int(msg[2:])
+        except: chat.sendMsg("请输入一个整数！")
+        else: bombRule(chat, num)
+    elif msg == "bomber":
+        if not bombs[5]:
+            if not sender in bombs[1]:
+                bombs[1].append(sender)
+                chat.sendMsg("您已成功加入游戏！")
+            else: chat.sendMsg("您已经加入过了！")
+        else: chat.sendMsg("这局已经开始了，等下局吧~")
+    elif msg == "*bom":
+        if not bombs[5]:
+            if not nick in bombs[1]:
+                bombs[1].append(nick)
+                chat.sendMsg("已成功添加机器人进入游戏！")
+            else: chat.sendMsg("机器人已经加入过了！")
+        else: chat.sendMsg("这局已经开始了，等下局吧~")
+    elif msg == "开始b" and not bombs[5]:
+        if len(bombs[1]) > 1:
+            bombs[5], bombs[6], bombs[7] = True, bombs[3], bombs[4]
+            bombs[0] = random.randint(bombs[3], bombs[4])
+            chat.sendMsg(f"炸弹已经设置好了，范围在{bombs[3]}到{bombs[4]}（包含两数）之间！\n由@{bombs[1][0]} 开始，发送==b 数字==游玩！")
+            if bombs[1][0] == nick: bombRule(chat)
+        else: chat.sendMsg("至少需要两个人才能开始！")
+    elif msg == "结束b" and bombs[5]:
+        endBomb()
+        chat.sendMsg("好吧好吧，结束咯~")
     elif msg == "菜单":
         if senderTrip == OWNER: men = "\n".join(MENU+MENUSSP)
         elif senderTrip in whiteList: men = "\n".join(MENU+MENUSP)
@@ -514,6 +588,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         chat.sendMsg(f"/w {sender} {ENGOWNMENU}")
     elif msg == "listwh":
         chat.sendMsg(f"当前白名单识别码：{'，'.join(whiteList)}")
+    elif msg == "listbl":
+        chat.sendMsg(f"当前白名单昵称：{'，'.join(blackName)}")
     elif "有人吗" in msg:
         chat.sendMsg(random.choice(RANDLIS[2]).replace("sender", sender))
     elif "bye" in msg or "拜拜" in msg:
@@ -588,29 +664,25 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     whiteList.append(name)
                     writeJson("userData.json", userData)
                     chat.sendMsg("添加特殊服务的家伙咯~")
-                else:
-                    chat.sendMsg("你要找的人并不在这里面~")
+                else: chat.sendMsg("你要找的人并不在这里面~")
             elif command == "0delw ":
                 if (name:=msg[6:12]) in whiteList:
                     whiteList.remove(msg[6:12])
                     writeJson("userData.json", userData)
                     chat.sendMsg("删除白名单用户成功！")
-                else:
-                    chat.sendMsg("你要找的人并不在这里面~")
+                else: chat.sendMsg("你要找的人并不在这里面~")
             elif command == "0igno ":
                 if not (name:=namePure(msg[6:])) in ignored:
                     ignored.append(name)
                     writeJson("userData.json", userData)
                     chat.sendMsg(f"忽略{name}的消息咯~")
-                else:
-                    chat.sendMsg("已经在了~")
+                else: chat.sendMsg("已经在了~")
             elif command == "0unig ":
                 if (name:=namePure(msg[6:])) in ignored:
                     ignored.remove(name)
                     writeJson("userData.json", userData)
                     chat.sendMsg(f"恢复记录{name}的消息成功了~")
-                else:
-                    chat.sendMsg("好消息是他/她的信息本来就被记录着~")
+                else: chat.sendMsg("好消息是他/她的信息本来就被记录着~")
             elif command == "0bans ":
                 if not (name:=namePure(msg[6:])) in banned:
                     banned.append(name)
@@ -621,8 +693,14 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 if (name:=namePure(msg[6:])) in banned:
                     banned.remove(name)
                     chat.sendMsg(f"好好好！")
+                else: chat.sendMsg("他/她还没有被封哦！")
+            elif command == "0setb ":
+                sp = msg.split()
+                try: mini, maxi = int(sp[1]), int(sp[2])
+                except: chat.sendMsg("输入格式有误，请在0setb 后面用空格隔开，输入最小值和最大值两个整数！")
                 else:
-                    chat.sendMsg("他/她还没有被封哦！")
+                    if (maxi-mini)<10: chat.sendMsg("两数的差别过小，请重新设置！")
+                    else: bombs[3], bombs[4] = mini, maxi
             elif command == "0relo ":
                 if (ind:=msg[6:]) == "0":
                     with open(FILENAME, encoding="utf8") as f:
@@ -640,7 +718,10 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                         RANDLIS[6] = rpy[0]
                         RANDLIS[19] = rpy[1]
                         chat.sendMsg(f"{called}回复信息重读成功咯~")
-            elif msg == "0close": sys.exit()
+            elif msg == "0close":
+                p = sys.executable
+                chat.ws.close()
+                os.execl(p, p, *sys.argv)
                     
             elif msg == "0stfu 1":
                 thingsList[8] = True
@@ -862,7 +943,9 @@ class HackChat:
         elif msg == "帮助":
             self.sendMsg(CCMENU.replace("sender", sender))
         elif msg == "提问":
-            chat.sendMsg(random.choice(RANDLIS[19]).replace("sender", sender))
+            self.sendMsg(random.choice(RANDLIS[19]).replace("sender", sender))
+        elif msg == "数字炸弹":
+            self.sendMsg(BOMBMENU.replace("sender", sender))
         else:
             self.sendMsg(reply(sender, msg))
 
@@ -917,6 +1000,7 @@ class HackChat:
                     elif cmd == "onlineRemove":
                         self.onlineUsers.remove(rnick)
                         leave(self, rnick)
+                    # 收到私信！
                     elif result.get("type") == "whisper" and result["text"][:3] != "You":
                         whispered(self, result["from"], "".join(result["text"].split(":")[1:]), result)
                     # 更换颜色（色色达咩）
