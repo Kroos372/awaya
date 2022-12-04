@@ -54,8 +54,9 @@ RANDLIS = [
     ["没活了可以咬打火机。", "理论上说，所谓的无聊都只是懒而已。", "学习，做一些自己感兴趣的事情？", "错误的", "给大家整个活：", "发电发电！", "紫砂吧。", "好好好", "陪我玩。", "真的假的"], #4
     replys[1], #5
     ["也没有那么傻", "知道了知道了", "没想到sender意外地有自知之明呢", "啊对对对", "智将（确信）", "没活整可以咬打火机。", "正确的", "我就知道" ], #6
-    [ "有",  "嗯（冷漠）", "没", "sender不会是寂寞了吧", "人……人……有吧？", "你叫一声？" ], #7
-    [ "拜", "bye~", "下次再来啊~", "等着你哦", "别忘了这里哦~", "see u" ], #8
+    ["有",  "嗯（冷漠）", "没", "sender不会是寂寞了吧", "人……人……有吧？", "你叫一声？" ], #7
+    ["拜", "bye~", "下次再来啊~", "等着你哦", "别忘了这里哦~", "see u" ], #8
+    ["hello~", "hi", "欢迎", "今天过得怎么样", "还好吗", "你好", "whats up", "Good morning", "早上好！", "sender啊，好好", "sender~"], #9
 ]
 del replys
 RULE = "\n".join([
@@ -121,8 +122,7 @@ MENU = [
     "|r|获取随机数|r 100|r后面若加空格与整数则代表取 1\\~该数字(含)或该数字（含）\\~1间的随机数，否则取1\\~1000间。|",
     "|rollen|反复r，将r到的数作为最大值继续r，直到1|rto1 9999|后面加参数表示初始最大值，如果不设则为1000|",
     "|rprime|获取随机数并分解质因数|rprim 999|规则与~prim, r相同~~质因数分解玩魔怔了~~|",
-    "|listwh|列出白名单识别码|listwh|==list wh==itelist users|",
-    "|listbl|列出黑名单名字|listbl|==list bl==acklist users|",
+    "|listwh/bn/bl/ig|列出白名单/黑名单/忽略名单etc.|listbn| \\ |",
     f"|@bot名 文本|聊天|@{nick} help| API来自[青云客](https://api.qingyunke.com/)~~也有一部分是我主人亲笔写的~~|",
     f"|@bot名 帮助|象棋bot的帮助|@{nick} 帮助|象棋！|",
     f"|@bot名 数字炸弹| 数字炸弹bot的帮助|@{nick} 数字炸弹|好玩|",
@@ -240,3 +240,37 @@ GAMEMENU = "\n".join([
     f"PS: ***实在***没活整了可以发送==@{nick} 提问==获取些离谱小问题，当然你要是把这当成功能的一部分的话我就\\*优美的中国话\\*",
     f"PSS: 获取随机数只能用*r*，而不是*r 数字*，后者在真心话中会被忽略。"
 ])
+
+def sb()->str: return random.choice(RANDLIS[6]).replace("sender", sender)
+def wh()->str: return f"当前白名单识别码：{'，'.join(whiteList)}"
+def bn()->str: return f"当前黑名单昵称：{'，'.join(blackName)}"
+def bl()->str: return f"当前黑名单hash：{'，'.join(blackList)}"
+def ig()->str: return f"当前被忽略的用户：{'，'.join(ignored)}"
+def bom()->str:
+    if not bombs[5]:
+        if not nick in bombs[1]:
+            bombs[1].append(nick)
+            return "已成功添加机器人进入游戏！"
+        else: return "机器人已经加入过了！"
+    else: return "这局已经开始了，等下局吧~"
+def hi()->str: return random.choice(RANDLIS[9]).replace("sender", sender)
+def st()->str:
+    if thingsList[3]: return colorPic()
+    else: return "害，别惦记你那涩涩了。"
+
+LINE = {
+    # 纪念零姬……
+    "0.0": "0.0.0",
+    "贴贴": "贴贴sender~",
+    "#精神状态": "ᕕ( ᐛ )ᕗ",
+    "engvers": "To be continue...",
+
+    "我是傻逼": sb,
+    "涩图": st,
+    "hi": hi,
+    "listwh": wh,
+    "listbn": bn,
+    "listbl": bl,
+    "listig": ig,
+    "*bom": bom,
+}
