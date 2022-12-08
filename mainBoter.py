@@ -202,7 +202,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     elif msg.strip() == f"@{nick}":
         if rans > 129: chat.sendMsg(random.choice(RANDLIS[1]).replace("sender", sender))
         else: chat.sendMsg(random.choice(RANDLIS[0]).replace("sender", sender))
-    elif msg[:len(nick)+2] == f"@{nick} " :
+    elif msg.startswith(f"@{nick} "):
         chat.CCreply(sender, msg[len(nick)+2:])
     elif msg[0] == "r":
         if msg == "r":
@@ -411,10 +411,9 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 else:
                     chat.sendMsg("他/她已经被封了！")
             elif command == "0uban ":
-                if (name:=namePure(msg[6:])) in banned:
-                    banned.remove(name)
-                    chat.sendMsg(f"好好好！")
-                else: chat.sendMsg("他/她还没有被封哦！")
+                try: banned.pop(int(msg[6:]))
+                except: chat.sendMsg("命令错了。。。")
+                else: chat.sendMsg("删除成功！")
             elif command == "0chkr ":
                 array = msg.split()
                 if len(array) >= 2:
@@ -489,7 +488,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         else:
             chat.sendMsg(random.choice(RANDLIS[2]).replace("sender", sender))
 
-def join(chat, joiner: str, color: str):
+def join(chat, joiner: str, color: str, result: dict):
     '''{'cmd': 'onlineAdd', 'nick': str, 'trip': str, 
         'uType': 'user', 'hash': str, 'level': 100, 
         'userid': iny, 'isBot': False, 'color': False or str, 
@@ -513,14 +512,14 @@ def join(chat, joiner: str, color: str):
     if hash_ in banned: chat.sendMsg(f"/w {joiner} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
     else: chat.sendMsg(msg)
 
-def onSet(chat, nicks: list, users: list):
+def onSet(chat, result: dict):
     '''{'cmd': 'onlineSet', 'nicks': list, 'users': 
         [{'channel': str, 'isme': bool,  'nick': str,  'trip': str, 
             'uType': 'user', 'hash': str,  'level': 100, 'userid': int, 
             'isBot': False, 'color': str or False}*x],
         'channel': str, 'time': int}'''
     chat.onlineUsers = result["nicks"]
-    for i in users:
+    for i in result["users"]:
         nick_ = i["nick"]
         userHash[nick_] = i["hash"]
         userColor[nick_] = i["color"]
@@ -549,14 +548,24 @@ def leave(chat, leaver: str):
 
 def whispered(chat, from_: str, msg: str, result: dict):
     msg = msg[1:]
+    command = msg[:6]
+    pre = f"/w {from_} "
     print(f"{from_}对你悄悄说：{msg}")
     if result.get("trip") in whiteList:
-        if msg[:6] == "~hash ":
-            chat.sendMsg(f"/w {from_} {hashByName(namePure(msg[6:]))}")
+        if command == "~hash ": chat.sendMsg(pre + hashByName(namePure(msg[6:])))
+        elif command == "~hasn ": chat.sendMsg(pre + hashByName(namePure(msg[6:]), True))
+        else: chat.sendMsg(pre + reply(from_, msg))
+    elif command == "~left":
+        if len(lis := msg.split()) < 3:
+            chat.sendMsg(pre + "命令不正确！")
+        elif lis[1] in chat.onlineUsers:
+            chat.sendMsg(pre + f"{lis[1]}在线着呢，为什么还要留言啊喂~")
+        elif not re.search(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
+            chat.sendMsg(pre + "昵称不合法！")
         else:
-            chat.sendMsg(f"/w {from_} {reply(from_, msg)}")
-    else:
-        chat.sendMsg(f"/w {from_} {reply(from_, msg)}")
+            leftMsg[time.time()] = [sender, namePure(lis[1]), "".join(lis[2:])]
+            chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
+    else: chat.sendMsg(pre + reply(from_, msg))
 
 class HackChat:
     def __init__(self, channel: str, nick: str, passwd: str, color: str):
@@ -698,7 +707,7 @@ class HackChat:
         """既然整点了肯定就要刷一刷存在咯~"""
         while True:
             count = time.localtime(time.time())
-            time.sleep(3600 - count.tm_min*60 - count.tm_sec)
+            time.sleep(3600 - count.tm_min*60 - count.tm_sec + 28.5)
             if thingsList[3]: self.sendMsg(colorPic())
             if thingsList[5]: chat.sendMsg(f"已经{(count.tm_hour + 1) % 24}点了啊。")
     def run(self):
@@ -714,7 +723,7 @@ class HackChat:
                     # 接收到消息！
                     if cmd == "chat": msgGot(self, result["text"], rnick, userTrip[rnick])
                     # 有新人来！
-                    elif cmd == "onlineAdd": join(self, rnick, result.get("color", ""))
+                    elif cmd == "onlineAdd": join(self, rnick, result.get("color", ""), result)
                     # 有人离开……
                     elif cmd == "onlineRemove": leave(self, rnick)
                     # 收到私信！
@@ -727,7 +736,7 @@ class HackChat:
                         if not "blocked" in result["text"]: print(result["text"])
                         else: time.sleep(2)
                     # 当然要用最好的状态迎接开始啦！
-                    elif cmd == "onlineSet": onSet(self, result["nicks"], result["users"])
+                    elif cmd == "onlineSet": onSet(self, result)
                 elif cmd == "chat" and userTrip.get(rnick) == OWNER and result["text"] == "0stfu 0":
                         thingsList[8] = False
         # 坏心眼……

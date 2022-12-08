@@ -161,7 +161,7 @@ OWNMENU = "\n".join(["只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
     f"|0unig 昵称|记录某人信息|0unig @{owner}| 同上 |",
     "|0stfu 0或1| 1为休眠，使bot不回复任何信息，0为取消休眠 | 0stfu | 刷屏什么的去死好了。 |",
     "|0bans 昵称| 封禁某人，和kill一样，但会持续 | 0bans abcd | \\ |",
-    "|0uban 昵称| 取消封禁某人 | 0uban abcd | \\ |",
+    "|0uban 序号| 取消封禁某人 | 0uban abcd | \\ |",
     "|0remake| 重启 |0remake|restart太长了|",
     "|0chkr 问题 序号|查看某个问题的回答或第序号个回答，序号可选。|0chkr 什么鬼| ==ch==ec==k== ==r==eply |",
     "|0delr 问题 序号|删除某个问题的回答或第序号个回答，序号可选。|0delr 什么鬼| \\ |",
@@ -246,6 +246,7 @@ def wh()->str: return f"当前白名单识别码：{'，'.join(whiteList)}"
 def bn()->str: return f"当前黑名单昵称：{'，'.join(blackName)}"
 def bl()->str: return f"当前黑名单hash：{'，'.join(blackList)}"
 def ig()->str: return f"当前被忽略的用户：{'，'.join(ignored)}"
+def ban()->str: return f"当前被封禁的hash：{'，'.join(banned)}"
 def bom()->str:
     if not bombs[5]:
         if not nick in bombs[1]:
