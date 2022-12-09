@@ -1,4 +1,4 @@
-import json
+import json, time, random
 import numpy as np
 
 # 莫名其妙的编码问题，很让我头疼啊~
@@ -7,6 +7,10 @@ def dec(cont: str) -> str:
         return cont.encode("utf8")[3:].decode("utf8")
     else:
         return cont
+# 返回日期
+def nowDay() -> str:
+    now = time.localtime()
+    return f"{now.tm_year}{now.tm_mon:0>2}{now.tm_mday:0>2}"
 
 # 读取文件们
 FILENAME = "hash.json"
@@ -22,10 +26,9 @@ with open("reply.json", encoding="utf8") as f:
     replys = json.loads(dec(f.read()))
 with open("answer.json", encoding="utf8") as f:
     answer = json.loads(dec(f.read()))
-# 命令们
 
-# [0象棋开关, 1轮到谁, 2结束游戏的人, 3涩图开关, 4真心话开关, 5报时开关, 6{昵称：摇出的数字}, 7[玩游戏中的hash], 8休眠开关]
-thingsList = [False, None, None, False, False, True, {}, [], False]
+# [0象棋开关, 1轮到谁, 2结束游戏的人, 3涩图开关, 4真心话开关, 5报时开关, 6{昵称：摇出的数字}, 7[玩游戏中的hash], 8休眠开关, 9当前日期]
+thingsList = [False, None, None, False, False, True, {}, [], False, nowDay()]
 # [0炸弹数字, 1在玩的人, 2轮到序号, 3初始最小值, 4初始最大值, 5是否在玩, 6本轮最小值, 7本轮最大值]
 bombs = [0, [], 0, 1, 1000, False, 1, 1000]
 channel, nick, passwd, color, owner, called = info["channel"], info["nick"], info["passwd"], info["color"], info["owner"], info["called"]
@@ -48,7 +51,7 @@ RANDLIS = [
     [f"找{owner}去吧。", "早上好！", "干什么?", "想下象棋吗？发送菜单看看？", "好好好~", "有什么吩咐~", "sender寂寞了吧", "发送菜单了解我的功能~", "怎么了？",
     "![](https://i.gyazo.com/eab45f465ed035c58c8595159eb9f6e2.gif)", "在这在这~", "@sender", "Hello", "Yes?"], #0
     replys[0], #1
-    ["sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "是这样的", "/me awa", "你说得对", "违法内容，请终止当前话题。"], #2
+    ["sender最可爱了", "sender棒棒", "sender是小天使", "/shrug", "是这样的", "你说得对", "违法内容，请终止当前话题。", "？"], #2
     ["hi, joiner", "hello, joiner", "joiner!", "Sup", "joiner! Hows ur day?", "出现了，joiner!", "这不是joiner吗~", "你好诶，joiner，新的一天也要加油哦！",
      "Welcome, joiner!", "好久不见啊，joiner~", "早上好，joiner!"], #3
     ["没活了可以咬打火机。", "理论上说，所谓的无聊都只是懒而已。", "学习，做一些自己感兴趣的事情？", "错误的", "给大家整个活：", "发电发电！", "紫砂吧。", "好好好", "陪我玩。", "真的假的"], #4
@@ -116,6 +119,7 @@ MENU = [
     f"|~unlo 昵称| 清除留下的话 | ~unlt @{owner} | 请求清除者的识别码须和留言者一样。用完就扔是个好习惯哦~ |",
     "|~prim 正整数 | 分解质因数 | ~prim 1234567890123 | 最多十三位数，超过会被自动截断 |",
     "|~rand 正整数|获取X个极为抽象的随机设计|~rand 1|来自[这里](https://protobot.org/#zh)，一次最多十件。 |",
+    "|~repl 提问 回答|自定义阿瓦娅回答|~repl 1+1 2|支持正则表达式，提问中请使用`~`代表空格，`\\~`代表\\~。|"
     # "|insane| 发电实录 |insane| \\ |",
 
     "|afk|标记自己为挂机状态，标记后发言时自动解除|afk 吃饭|借鉴自bo_od|",
@@ -152,7 +156,6 @@ ADMMENU = [
     f"|0deln 昵称|删除黑名单昵称|0deln {owner}| 同上 |",
     "|0bcol 颜色值|修改bot颜色值|0bcol aaaaaa| \\ |",
     "|0setb 最小值 最大值|设置数字炸弹的最小值与最大值|0setb 1 100| \\ |",
-    "|0repl 提问 回答|自定义阿瓦娅回答|0setb 1+1 2|支持正则表达式，提问中请使用`~`代表空格，`\\~`代表\\~。|"
 ]
 OWNMENU = "\n".join(["只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
     f"|0addw 识别码|添加白名单用户（识别码）|0addw {OWNER}| ==addw==hitelist user|",
@@ -241,30 +244,32 @@ GAMEMENU = "\n".join([
     f"PSS: 获取随机数只能用*r*，而不是*r 数字*，后者在真心话中会被忽略。"
 ])
 
-def sb()->str: return random.choice(RANDLIS[6]).replace("sender", sender)
-def wh()->str: return f"当前白名单识别码：{'，'.join(whiteList)}"
-def bn()->str: return f"当前黑名单昵称：{'，'.join(blackName)}"
-def bl()->str: return f"当前黑名单hash：{'，'.join(blackList)}"
-def ig()->str: return f"当前被忽略的用户：{'，'.join(ignored)}"
-def ban()->str: return f"当前被封禁的hash：{'，'.join(banned)}"
-def bom()->str:
+def sb(sender: str)->str: return random.choice(RANDLIS[6]).replace("sender", sender)
+def wh(sender: str)->str: return f"当前白名单识别码：{'，'.join(whiteList)}"
+def bn(sender: str)->str: return f"当前黑名单昵称：{'，'.join(blackName)}"
+def bl(sender: str)->str: return f"当前黑名单hash：{'，'.join(blackList)}"
+def ig(sender: str)->str: return f"当前被忽略的用户：{'，'.join(ignored)}"
+def ban(sender: str)->str: return f"当前被封禁的hash：{'，'.join(banned)}"
+def bom(sender: str)->str:
     if not bombs[5]:
         if not nick in bombs[1]:
             bombs[1].append(nick)
             return "已成功添加机器人进入游戏！"
         else: return "机器人已经加入过了！"
     else: return "这局已经开始了，等下局吧~"
-def hi()->str: return random.choice(RANDLIS[9]).replace("sender", sender)
-def st()->str:
+def hi(sender: str)->str: return random.choice(RANDLIS[9]).replace("sender", sender)
+def st(sender: str)->str:
     if thingsList[3]: return colorPic()
     else: return "害，别惦记你那涩涩了。"
 
 LINE = {
     # 纪念零姬……
-    "0.0": "0.0.0",
-    "贴贴": "贴贴sender~",
-    "#精神状态": "ᕕ( ᐛ )ᕗ",
-    "engvers": "To be continue...",
+    "0.0": ["0.0.0"],
+    "贴贴": ["贴贴sender~"],
+    "#精神状态": ["ᕕ( ᐛ )ᕗ", "良好，谢谢"],
+    "engvers": ["To be continue..."],
+    "6": ["6", "9"],
+    "？": ["？", "不对劲"],
 
     "我是傻逼": sb,
     "涩图": st,
@@ -274,4 +279,10 @@ LINE = {
     "listbl": bl,
     "listig": ig,
     "*bom": bom,
+}
+INLINE = {
+    "有人吗": RANDLIS[7],
+    "拜拜|bye": RANDLIS[8],
+    "无聊": RANDLIS[4],
+    "awa": ["qaq", "qwq", "qwp", "ovo"],
 }

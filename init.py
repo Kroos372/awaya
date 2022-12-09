@@ -1,4 +1,4 @@
-import json
+import json, os
 
 def dec(cont: str) -> str:
     if cont.startswith(u"\ufeff"):
@@ -15,8 +15,12 @@ if __name__ == '__main__':
         whiteList = userData["whiteList"]
     if not nick in blackName:
         blackName.append(nick)
-    if not owner in whiteList
+    if not owner in whiteList:
         whiteList.append(owner)
+    if not os.path.exists("log"):
+        os.mkdir("log")
+    if not os.path.exists("traceback"):
+        os.mkdir("traceback")
     with open("userData.json", "w", encoding="utf8") as f:
         json.dump(userData, fp=f, ensure_ascii=False, indent=2)
 
