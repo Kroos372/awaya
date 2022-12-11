@@ -207,14 +207,12 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             if len(array) < 3: chat.sendMsg("命令错误，请使用`~repl 提问 回答`的格式！")
             else:
                 quest = textPure(array[1])
-                ans = answer[quest]
                 if array[2:][0] == "/":
                     chat.sendMsg("？你想干什么")
                     return
-                elif not quest in answer: ans = [array[2:]]
-                else:
-                    ans.append(array[2:])
-                chat.sendMsg(f"添加成功！现在“{quest}”的回复有：{'，'.join(ans)}")
+                elif not quest in answer: answer[quest] = array[2:]
+                else: answer[quest].append(array[2:])
+                chat.sendMsg(f"添加成功！")
                 writeJson("answer.json", answer)
 
     elif msg.strip() == f"@{nick}":
@@ -416,8 +414,9 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 if len(array) >= 2:
                     if ans:=answer.get(textPure(array[1])):
                         if len(array) == 2:
-                            for i, v in enumerate(ans): ans[i] = f"{i}：{v}，"
-                            col = "\n".join(ans)
+                            arr = []
+                            for i, v in enumerate(ans): arr.append(f"{i}：{v}")
+                            col = "\n".join(arr)
                             chat.sendMsg(f"/w {sender} 此问题的回答有：\n{col}")
                         else:
                             try: chat.sendMsg(f"/w {sender} {ans[int(array[2])]}")
@@ -426,17 +425,19 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 else: chat.sendMsg(f"/w {sender} 命令错误，请使用`chkr 问题 序号`的格式（序号可选，用`~`代表空格，`\\~`代表\\~）！")
             elif command == "0delr ":
                 array = msg.split()
-                if len(array) < 3: chat.sendMsg(f"/w {sender} 命令错误，请使用`0delr 问题 序号`的格式（序号可选，用`~`代表空格，`\\~`代表\\~）！")
+                if len(array) > 3: chat.sendMsg(f"/w {sender} 命令错误，请使用`0delr 问题 序号`的格式（序号可选，用`~`代表空格，`\\~`代表\\~）！")
                 else: 
+                    array[1] = textPure(array[1])
                     if len(array) == 2:
                         try:
                             del answer[array[1]]
                             chat.sendMsg(f"/w {sender} 已成功删除“{array[1]}”的所有回答！")
                         except: chat.sendMsg(f"/w {sender} 此问题还未设置答案，请重新确认后再次再试！")
-                    try: 
-                        ans = answer[array[1]].pop(int(array[2]))
-                        chat.sendMsg(f"/w {sender} 已成功删除回答：“{ans}”！")
-                    except: chat.sendMsg(f"/w {sender} 此问题还未设置答案或序号错误，请重新确认后再次再试！")
+                    else:
+                        try: 
+                            ans = answer[array[1]].pop(int(array[2]))
+                            chat.sendMsg(f"/w {sender} 已成功删除回答：“{ans}”！")
+                        except: chat.sendMsg(f"/w {sender} 此问题还未设置答案或序号错误，请重新确认后再次再试！")
             elif command == "0remb ":
                 try: blackList.pop(int(msg[6:]))
                 except: chat.sendMsg("命令错了。。。")
@@ -567,7 +568,7 @@ def whispered(chat, from_: str, msg: str, result: dict):
         elif not re.search(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
             chat.sendMsg(pre + "昵称不合法！")
         else:
-            leftMsg[time.time()] = [sender, namePure(lis[1]), "".join(lis[2:])]
+            leftMsg[time.time()] = [from_, namePure(lis[1]), "".join(lis[2:])]
             chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
     else: chat.sendMsg(pre + reply(from_, msg))
 

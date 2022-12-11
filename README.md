@@ -23,8 +23,8 @@
 		5. Bot颜色（可空）  
 		6. Bot主人名字  
 		7. Bot主人识别码  
-		8. 自称（中文名）
-		9. 镑15便士
+		8. 自称（中文名）  
+		9. 镑15便士  
 
 3. 运行[init.py](https://github.com/Kroos372/awaBot/blob/main/init.py)。
 
