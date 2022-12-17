@@ -131,16 +131,17 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         for user in afk:
             if f"@{user.lower()}" in msg.lower():
                 chat.sendMsg(f"{user} 正在{afk[user]}，请不要打扰ta……")
-    if msg[0] == "~":
-        if command == "~hash ": chat.sendMsg(hashByName(namePure(msg[6:])))
-        elif command == "~hasn ": chat.sendMsg(hashByName(namePure(msg[6:]), True))
-        elif command == "~code ": chat.sendMsg(hashByCode(msg[6:]))
-        elif command == "~colo ":
+    if msg[0] == PREFIX:
+        command = msg[1:6]
+        if command == "hash ": chat.sendMsg(hashByName(namePure(msg[6:])))
+        elif command == "hasn ": chat.sendMsg(hashByName(namePure(msg[6:]), True))
+        elif command == "code ": chat.sendMsg(hashByCode(msg[6:]))
+        elif command == "colo ":
             if (color := userColor.get(namePure(msg[6:]))) is not None:
                 if color: chat.sendMsg(color)
                 else: chat.sendMsg("该用户还没有设置颜色！")
             else: chat.sendMsg("没有这个用户！")
-        elif command == "~left ":
+        elif command == "left ":
             if len(lis := msg.split()) < 3:
                 chat.sendMsg("命令不正确！")
             elif lis[1] in chat.onlineUsers:
@@ -150,14 +151,14 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             else:
                 leftMsg[time.time()] = [sender, namePure(lis[1]), "".join(lis[2:])]
                 chat.sendMsg(f"@{sender}, {lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
-        elif command == "~peep ":
+        elif command == "peep ":
             try:
                 if msg[6:] == "0": raise ValueError
                 want_peep = int(msg[6:])
                 if want_peep < 0: chat.sendMsg(f"/w {sender} 以下是从最前面到第{-want_peep}条的消息：\n"+ "\n".join(allMsg[:-want_peep]))
                 else: chat.sendMsg(f"/w {sender} 以下是从最近的{want_peep}条的消息：\n"+ "\n".join(allMsg[-want_peep:]))
             except ValueError: chat.sendMsg(f"/w {sender} 然而peep后面需要一个非零整数")
-        elif command == "~welc ":
+        elif command == "welc ":
             if (text := msg[6:])[:1] == "/":
                 chat.sendMsg("诶！你想干什么？真是坏心眼~")
             elif senderTrip:
@@ -165,13 +166,13 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 writeJson("userData.json", userData)
                 chat.sendMsg(f"为识别码{senderTrip}设置欢迎语成功了！")
             else: chat.sendMsg("您当前还没有识别码，请重进并在昵称输入界面使用==昵称#密码==设置一个！")
-        elif msg == "~welc":
+        elif msg == "welc":
             if senderTrip in userData["welText"]:
                 del userData["welText"][senderTrip]
                 writeJson("userData.json", userData)
                 chat.sendMsg(f"为识别码{senderTrip}清除欢迎语成功了！")
             else: chat.sendMsg("你还没有设置欢迎语！")
-        elif command == "~last ":
+        elif command == "last ":
             if sender in userData["lastText"] and userData["lastText"][sender][0] != senderTrip:
                 chat.sendMsg(f"已经有人为{sender}设置过留言了，请换一个名字！")
             elif senderTrip:
@@ -179,11 +180,11 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 writeJson("userData.json", userData)
                 chat.sendMsg(f"为{sender}({senderTrip})设置留言成功了！记得及时清除哦！")
             else: chat.sendMsg("您当前还没有识别码，请重启并在昵称输入界面使用==昵称#密码==设置一个！")
-        elif command == "~lost ":
+        elif command == "lost ":
             if (name:=namePure(msg[6:])) in (dic:=userData["lastText"]):
                 chat.sendMsg(f"以下是{name}({dic[name][0]})的留言：\n{dic[name][1]}")
             else: chat.sendMsg("该用户还没有设置留言~")
-        elif command == "~unlo ":
+        elif command == "unlo ":
             if (name:=namePure(msg[6:])) in (dic:=userData["lastText"]):
                 if senderTrip == dic[name][0] or senderTrip in whiteList:
                     del dic[name]
@@ -191,20 +192,20 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     chat.sendMsg("留言已删除，感谢您的使用！")
                 else: chat.sendMsg(f"您的识别码与被清除者不同！正确识别码应为{dic[name][0]}！")
             else: chat.sendMsg("此用户还没有设置留言~")
-        elif command == "~prim ":
+        elif command == "prim ":
             try:
                 digit = msg[6:19]
                 eq = "\\*".join(getPrime(int(digit), []))
                 chat.sendMsg(f"{digit}={eq}")
             except ValueError: chat.sendMsg("请输入一个***正整数***啊啊啊啊！")
-        elif command == "~rand ":
+        elif command == "rand ":
             try:
                 digit = int(msg[6:])
                 chat.sendMsg(randomDesign(digit))
             except ValueError: chat.sendMsg("参数必须是1到10之间的正整数！")
-        elif command == "~repl ":
-            array = msg.split()
-            if len(array) < 3: chat.sendMsg("命令错误，请使用`~repl 提问 回答`的格式！")
+        elif command == "repl ":
+            array = msg.split(" ")
+            if len(array) < 3: chat.sendMsg("命令错误，请使用`;repl 提问 回答`的格式！")
             else:
                 quest = textPure(array[1])
                 if array[2:][0] == "/":
@@ -476,12 +477,13 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                         RANDLIS[6] = rpy[0]
                         RANDLIS[19] = rpy[1]
                         chat.sendMsg(f"{called}回复信息重读成功咯~")
+            elif command == "0stfu ":
+                try: thingsList[8] = int(msg[6:])
+                except: pass
             elif msg == "0remake":
                 p = sys.executable
                 chat.ws.close()
                 os.execl(p, p, *sys.argv)
-            elif msg == "0stfu 1":
-                thingsList[8] = True
     elif rans > 130 and allMsg:
         if rans == 133:
             chat.sendMsg(random.choice(allMsg).split("：")[1])
@@ -553,23 +555,23 @@ def leave(chat, leaver: str):
 
 def whispered(chat, from_: str, msg: str, result: dict):
     msg = msg[1:]
-    command = msg[:6]
+    command = msg[1:6]
     pre = f"/w {from_} "
     print(f"{from_}对你悄悄说：{msg}")
-    if result.get("trip") in whiteList:
-        if command == "~hash ": chat.sendMsg(pre + hashByName(namePure(msg[6:])))
-        elif command == "~hasn ": chat.sendMsg(pre + hashByName(namePure(msg[6:]), True))
-        else: chat.sendMsg(pre + reply(from_, msg))
-    elif command == "~left":
-        if len(lis := msg.split()) < 3:
-            chat.sendMsg(pre + "命令不正确！")
-        elif lis[1] in chat.onlineUsers:
-            chat.sendMsg(pre + f"{lis[1]}在线着呢，为什么还要留言啊喂~")
-        elif not re.search(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
-            chat.sendMsg(pre + "昵称不合法！")
-        else:
-            leftMsg[time.time()] = [from_, namePure(lis[1]), "".join(lis[2:])]
-            chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
+    if msg[0] == PREFIX:
+        if command == "left":
+            if len(lis := msg.split()) < 3:
+                chat.sendMsg(pre + "命令不正确！")
+            elif lis[1] in chat.onlineUsers:
+                chat.sendMsg(pre + f"{lis[1]}在线着呢，为什么还要留言啊喂~")
+            elif not re.search(r"^@{0,1}[a-zA-Z0-9_]{1,24}$", lis[1]):
+                chat.sendMsg(pre + "昵称不合法！")
+            else:
+                leftMsg[time.time()] = [from_, namePure(lis[1]), "".join(lis[2:])]
+        elif result.get("trip") in whiteList:
+            if command == "hash ": chat.sendMsg(pre + hashByName(namePure(msg[6:])))
+            elif command == "hasn ": chat.sendMsg(pre + hashByName(namePure(msg[6:]), True))
+                chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
     else: chat.sendMsg(pre + reply(from_, msg))
 
 class HackChat:
@@ -723,10 +725,11 @@ class HackChat:
                 cmd = result["cmd"]
                 rnick = result.get("nick")
 
-                if not thingsList[8]:
+                if (not thingsList[8]) or (thingsList[8] and result.get("trip") in whiteList): 
                     # print(result)
                     # 接收到消息！
-                    if cmd == "chat": msgGot(self, result["text"], rnick, userTrip[rnick])
+                    if cmd == "chat":
+                            msgGot(self, result["text"], rnick, result.get("trip"))
                     # 有新人来！
                     elif cmd == "onlineAdd": join(self, rnick, result.get("color", ""), result)
                     # 有人离开……
@@ -742,8 +745,6 @@ class HackChat:
                         else: time.sleep(2)
                     # 当然要用最好的状态迎接开始啦！
                     elif cmd == "onlineSet": onSet(self, result)
-                elif cmd == "chat" and userTrip.get(rnick) == OWNER and result["text"] == "0stfu 0":
-                        thingsList[8] = False
         # 坏心眼……
         except BaseException as e:
             with open(f"traceback/{time.time()}.txt", "w", encoding="utf8") as f:
