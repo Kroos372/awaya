@@ -97,7 +97,9 @@ def reply(sender: str, msg: str) -> str:
     rans = random.randint(1, 10)
     if rans > 6:
         for k, v in answer.items():
-            if re.search(k, msg): return random.choice(v).replace("sender", sender).replace("called", called)
+            if re.search(k, msg):
+                if v: return random.choice(v).replace("sender", sender).replace("called", called)
+                else: break
     cont = requests.get(f"https://api.qingyunke.com/api.php?key=free&msg={msg}")
     return cont.json()["content"].replace("菲菲", called).replace("{br}", "\n")\
     .replace("help", "==@bot名 help==，==菜单==或==@bot名 帮助==")
@@ -154,9 +156,13 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         elif command == "peep ":
             try:
                 if msg[6:] == "0": raise ValueError
-                want_peep = int(msg[6:])
-                if want_peep < 0: chat.sendMsg(f"/w {sender} 以下是从最前面到第{-want_peep}条的消息：\n"+ "\n".join(allMsg[:-want_peep]))
-                else: chat.sendMsg(f"/w {sender} 以下是从最近的{want_peep}条的消息：\n"+ "\n".join(allMsg[-want_peep:]))
+                array = msg[6:].split(" ")
+                if len(array)==2: 
+                    want_peep = int(array[1])
+                    if want_peep < 0: chat.sendMsg(f"/w {sender} 以下是从最前面到第{-want_peep}条的消息：\n"+ "\n".join(allMsg[:-want_peep]))
+                    else: chat.sendMsg(f"/w {sender} 以下是从最近的{want_peep}条的消息：\n"+ "\n".join(allMsg[-want_peep:]))
+                elif len(array)>2: chat.sendMsg(f"/w {sender} 懒得写提示语了：\n"+ "\n".join(allMsg[int(array[1]):int(array[2])]))
+                else: raise ValueError
             except ValueError: chat.sendMsg(f"/w {sender} 然而peep后面需要一个非零整数")
         elif command == "welc ":
             if (text := msg[6:])[:1] == "/":
@@ -205,14 +211,15 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             except ValueError: chat.sendMsg("参数必须是1到10之间的正整数！")
         elif command == "repl ":
             array = msg.split(" ")
-            if len(array) < 3: chat.sendMsg("命令错误，请使用`;repl 提问 回答`的格式！")
+            if len(array) < 3: chat.sendMsg(f"命令错误，请使用`{PREFIX}repl 提问 回答`的格式！")
             else:
+                ans = "".join(array[2:])
                 quest = textPure(array[1])
                 if array[2:][0] == "/":
                     chat.sendMsg("？你想干什么")
                     return
-                elif not quest in answer: answer[quest] = array[2:]
-                else: answer[quest].append(array[2:])
+                elif not quest in answer: answer[quest] = ans
+                else: answer[quest].append(ans)
                 chat.sendMsg(f"添加成功！")
                 writeJson("answer.json", answer)
 
@@ -559,7 +566,7 @@ def whispered(chat, from_: str, msg: str, result: dict):
     pre = f"/w {from_} "
     print(f"{from_}对你悄悄说：{msg}")
     if msg[0] == PREFIX:
-        if command == "left":
+        if command == "left ":
             if len(lis := msg.split()) < 3:
                 chat.sendMsg(pre + "命令不正确！")
             elif lis[1] in chat.onlineUsers:
@@ -568,10 +575,10 @@ def whispered(chat, from_: str, msg: str, result: dict):
                 chat.sendMsg(pre + "昵称不合法！")
             else:
                 leftMsg[time.time()] = [from_, namePure(lis[1]), "".join(lis[2:])]
+                chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
         elif result.get("trip") in whiteList:
             if command == "hash ": chat.sendMsg(pre + hashByName(namePure(msg[6:])))
             elif command == "hasn ": chat.sendMsg(pre + hashByName(namePure(msg[6:]), True))
-                chat.sendMsg(pre + f"{lis[1]}将会在加入时收到你的留言！~~如果那时我还在的话~~")
     else: chat.sendMsg(pre + reply(from_, msg))
 
 class HackChat:
