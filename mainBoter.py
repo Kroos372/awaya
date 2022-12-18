@@ -213,7 +213,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             array = msg.split(" ")
             if len(array) < 3: chat.sendMsg(f"命令错误，请使用`{PREFIX}repl 提问 回答`的格式(‾◡◝)")
             else:
-                ans = "".join(array[2:])
+                ans = " ".join(array[2:])
                 quest = textPure(array[1])
                 if array[2:][0] == "/":
                     chat.sendMsg("？你想干什么(⊙﹏⊙)")
