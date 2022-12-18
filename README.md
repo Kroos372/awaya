@@ -12,7 +12,10 @@
 特色：有很多实用的功能（也许），有一个[很抽象的API](https://api.qingyunke.com/)，可以让你在聊天室下象棋（这个是重点~~虽然一般没人有空用~~）。
 
 ### 用法
-1. 安装依赖库：websocket-client, requests, numpy。
+1. 安装依赖库
+- ```pip install -r requirements.txt``` 
+
+- 加速:```pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt ```
 
 2. 根据自己需求修改[info.json](https://github.com/Kroos372/awaBot/blob/main/info.json):  
 	文件从上到下值分别代表:  
