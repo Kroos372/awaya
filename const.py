@@ -29,8 +29,13 @@ with open("answer.json", encoding="utf8") as f:
 
 #命令前缀
 PREFIX = ";"
-# [0象棋开关, 1轮到谁, 2结束游戏的人, 3涩图开关, 4真心话开关, 5报时开关, 6{昵称：摇出的数字}, 7[玩游戏中的hash], 8休眠开关, 9当前日期]
-thingsList = [False, None, None, False, False, True, {}, [], False, nowDay()]
+
+# [0涩图开关, 1报时开关, 2休眠开关, 3当前日期]
+sysList = [False, True, False, nowDay()]
+# [0象棋开关, 1轮到谁, 2结束游戏的人, 3[红方, 黑方]]
+CCList = [False, None, None, [None, None]]
+# [0真心话开关, 1{昵称：摇出的数字}, 2[玩游戏中的hash]]
+truthList = [False, {}, []]
 # [0炸弹数字, 1在玩的人, 2轮到序号, 3初始最小值, 4初始最大值, 5是否在玩, 6本轮最小值, 7本轮最大值]
 bombs = [0, [], 0, 1, 1000, False, 1, 1000]
 channel, nick, passwd, color, owner, called = info["channel"], info["nick"], info["passwd"], info["color"], info["owner"], info["called"]
@@ -40,9 +45,9 @@ OWNER = info["ownerTrip"]
 whiteList = userData["whiteList"]
 # 黑名单：不回复
 blackList, blackName = userData["blackList"], userData["blackName"]
-# 在这的变量和在thingsList里的区别是，在这里的变量都不需要直接改变，只在原来基础上增删；
-# 在thingsList中的则需要，例如游戏中的hash和摇出的数字都会在结算中清空，储存在一个列表中就避免了各种莫名其妙的作用域问题
-allMsg, afk, leftMsg, redBlack, ignored, banned = [], {}, {}, [None, None], userData["ignored"], []
+# 在这的变量和在sysList里的区别是，在这里的变量都不需要直接改变，只在原来基础上增删；
+# 在sysList中的则需要，例如游戏中的hash和摇出的数字都会在结算中清空，储存在一个列表中就避免了各种莫名其妙的作用域问题
+allMsg, afk, leftMsg, ignored, banned = [], {}, {}, userData["ignored"], []
 userHash, userTrip, userColor, engUsers = {}, {}, {}, userData["engUsers"]
 
 CLOLUMN, LETTERS = ["| \\ |1|2|3|4|5|6|7|8|9|", "|-|-|-|-|-|-|-|-|-|-|"], list("ABCDEFGHIJ")
@@ -261,7 +266,7 @@ def bom(sender: str)->str:
     else: return "这局已经开始了，等下局吧~"
 def hi(sender: str)->str: return random.choice(RANDLIS[9]).replace("sender", sender)
 def st(sender: str)->str:
-    if thingsList[3]: return colorPic()
+    if sysList[0]: return colorPic()
     else: return "害，别惦记你那涩涩了。"
 
 LINE = {

@@ -105,7 +105,7 @@ def reply(sender: str, msg: str) -> str:
     .replace("help", "==@bot名 help==，==菜单==或==@bot名 帮助==")
 # 日志日志
 def logs(text: str):
-    with open(f"log/{thingsList[9]}.txt", "a+", encoding="utf8") as f:
+    with open(f"log/{sysList[3]}.txt", "a+", encoding="utf8") as f:
         f.write(text+"\n")
 def msgGot(chat, msg: str, sender: str, senderTrip: str):
     rans = random.randint(1, 134)
@@ -231,15 +231,15 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     elif msg[0] == "r":
         if msg == "r":
             ranNum = random.randint(1, 1000)
-            if thingsList[4]:
-                if sender in thingsList[6]:
-                    chat.sendMsg(f"{sender}已经摇出{thingsList[6][sender]}了(ﾉ\"◑ڡ◑)ﾉ")
-                elif (hashCode := userHash[sender] ) in thingsList[7]:
+            if truthList[0]:
+                if sender in truthList[1]:
+                    chat.sendMsg(f"{sender}已经摇出{truthList[1][sender]}了(ﾉ\"◑ڡ◑)ﾉ")
+                elif (hashCode := userHash[sender] ) in truthList[2]:
                     chat.sendMsg(f"{sender}，不要想开小号哦(￢з￢)σ ")
                 else:
-                    thingsList[6][sender] = ranNum
+                    truthList[1][sender] = ranNum
                     chat.sendMsg(str(ranNum))
-                    thingsList[7].append(hashCode)
+                    truthList[2].append(hashCode)
             else: chat.sendMsg(str(ranNum))
         elif msg[:2] == "r ":
             try: beR = int(msg[2:])
@@ -263,25 +263,25 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 eq = "\\*".join(getPrime(int(digit), []))
                 chat.sendMsg(f"{digit}={eq}")
     elif msg == "结算":
-        if thingsList[4]:
-            if len(thingsList[7]) < 2: chat.sendMsg("有句话叫什么，一个巴掌拍不响(°o°；)")
+        if truthList[0]:
+            if len(truthList[2]) < 2: chat.sendMsg("有句话叫什么，一个巴掌拍不响(°o°；)")
             else:
-                sort = sorted(thingsList[6].items(), key=lambda x: x[1])
+                sort = sorted(truthList[1].items(), key=lambda x: x[1])
                 loser, winner = sort[0], sort[-1]
-                fin = "\n".join([f"本轮参与人数：{len(thingsList[6])}。",f"最大：{winner[1]}（{winner[0]}），",
+                fin = "\n".join([f"本轮参与人数：{len(truthList[1])}。",f"最大：{winner[1]}（{winner[0]}），",
                     f"最小：{loser[1]}（{loser[0]}）。", f"@{winner[0]} 向@{loser[0]} 提问，@{loser[0]} 回答。"])
                 chat.sendMsg(fin)
-                thingsList[6] = {}
-                thingsList[7] = []
+                truthList[1] = {}
+                truthList[2] = []
         else: chat.sendMsg(f"真心话就没开始你在结算什么呢，{sender}(▼皿▼#)")
     elif msg == "真心话":
-        if not thingsList[4]:
+        if not truthList[0]:
             chat.sendMsg(GAMEMENU)
-            thingsList[4] = True
+            truthList[0] = True
         else: chat.sendMsg("已经在玩了哦╮(╯_╰)╭")
-    elif msg == "结束游戏" and thingsList[4]:
+    elif msg == "结束游戏" and truthList[0]:
         chat.sendMsg("好吧好吧，结束咯(一。一;;）")
-        thingsList[4] = False
+        truthList[0] = False
     elif msg[:2] == "b " and bombs[5] and sender == bombs[1][bombs[2]]:
         try: num = int(msg[2:])
         except: chat.sendMsg("请输入一个整数ヾ|≧_≦|〃")
@@ -334,7 +334,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         # 涩涩，没有涩涩我要死了！！！
         if command == "0setu ":
             try:
-                thingsList[3] = int(msg[6:])
+                sysList[0] = int(msg[6:])
                 chat.sendMsg("涩涩涩涩涩——")
             except ValueError: chat.sendMsg("你是1还是0？")
         # 小黑屋是不值得学习的！
@@ -372,7 +372,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             except KeyError: chat.sendMsg("可惜这人现在不在呢…(⊙＿⊙；)…")
         elif command == "0time ":
             try:
-                thingsList[5] = int(msg[6:])
+                sysList[1] = int(msg[6:])
                 chat.sendMsg("好好好，如你所愿~")
             except ValueError:
                 chat.sendMsg("1或者0，明白了吗~")
@@ -383,13 +383,19 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             chat.sendMsg(f"/color {hex(random.randint(0, 0xffffff))[2:]:0>6}")
             chat.sendMsg("自动变色ヽ(*。>Д<)o゜")
         elif command == "0kill ":
-            chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
-            chat.sendMsg(f"~kick {msg[6:]}")
+            name = namePure(msg[6:])
+            if name == chat.nick: chat.sendMsg("6")
+            else:
+                chat.sendMsg(f"/w {name} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
+                chat.sendMsg(f"~kick {name}")
         elif command == "0bans ":
-            if not (hash_:=userHash[namePure(msg[6:])]) in banned:
-                banned.append(hash_)
-                chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
-                chat.sendMsg(f"~kick {msg[6:]}")
+            name = namePure(msg[6:])
+            if not (hash_:=userHash[name]) in banned:
+                if name == chat.nick: chat.sendMsg("6")
+                else:
+                    banned.append(hash_)
+                    chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
+                    chat.sendMsg(f"~kick {msg[6:]}")
             else:
                 chat.sendMsg("他/她已经被封了！")
         elif command == "0uban ":
@@ -489,7 +495,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                         RANDLIS[19] = rpy[1]
                         chat.sendMsg(f"{called}回复信息重读成功咯~")
             elif command == "0stfu ":
-                try: thingsList[8] = int(msg[6:])
+                try: sysList[2] = int(msg[6:])
                 except: pass
             elif msg == "0remake":
                 p = sys.executable
@@ -606,37 +612,37 @@ class HackChat:
         self.ws.send(encoded)
     def move(self, old, new, chess):
         if CBL[0][new[0], new[1]] in [RED[4], BLACK[4]]:
-            self.sendMsg(f"@{thingsList[1]} 获胜！恭喜！")
+            self.sendMsg(f"@{CCList[1]} 获胜！恭喜！")
             self._endGame()
             return
-        now = thingsList[1]
-        thingsList[1] = redBlack[0] if thingsList[1] == redBlack[1] else redBlack[1]
+        now = CCList[1]
+        CCList[1] = CCList[3][0] if CCList[1] == CCList[3][1] else CCList[3][1]
         for i in CBL[0][:,3:6]:
             if (BLACK[4] in i) and (RED[4] in i) and set(i[list(i).index(RED[4])+1:list(i).index(BLACK[4])]) == {"&ensp;"}:
-                self.sendMsg(f"@{thingsList[1]} 获胜！恭喜！")
+                self.sendMsg(f"@{CCList[1]} 获胜！恭喜！")
                 self._endGame()
                 return
         CBL[0][old[0], old[1]] = "&ensp;"
         CBL[0][new[0], new[1]] = chess
         self._sendBoard()
-        self.sendMsg(f"{now}挪动了{chr(old[0]+65)}{old[1]+1}的{chess}，轮到@{thingsList[1]}")
+        self.sendMsg(f"{now}挪动了{chr(old[0]+65)}{old[1]+1}的{chess}，轮到@{CCList[1]}")
     def _endGame(self):
-        thingsList[1] = None
-        redBlack = [None, None]
-        thingsList[0] = False
+        CCList[1] = None
+        CCList[3] = [None, None]
+        CCList[0] = False
         CBL[0] = INIT.copy()
     def _sendBoard(self):
         mae = CLOLUMN+[f"|{n}|"+ "|".join(i) +"|" for i, n in zip(CBL[0], LETTERS)]
         self.sendMsg("\n".join(mae))
     def CCreply(self, sender: str, msg: str):
-        if redBlack[1] and sender == thingsList[1] and (res := re.search(r"^([ABCDEFGHIJ])([123456789]) ([ABCDEFGHIJ])([123456789])$", msg.upper())):
+        if CCList[3][1] and sender == CCList[1] and (res := re.search(r"^([ABCDEFGHIJ])([123456789]) ([ABCDEFGHIJ])([123456789])$", msg.upper())):
             res = res.groups()
             old, new = [ord(res[0])-65, int(res[1])-1], [ord(res[2])-65, int(res[3])-1]
             goingChess, moveChess = CBL[0][new[0], new[1]], CBL[0][old[0], old[1]]
             if moveChess != "&ensp;":
                 use = CBL[0][min(old[0], new[0])+1:max(old[0], new[0]), old[1]]
                 use2 = CBL[0][old[0], min(old[1], new[1])+1:max(old[1], new[1])]
-                if (not redBlack.index(sender) and not goingChess in RED and moveChess in RED) or (redBlack.index(sender) and not goingChess in BLACK and moveChess in BLACK):                    
+                if (not CCList[3].index(sender) and not goingChess in RED and moveChess in RED) or (CCList[3].index(sender) and not goingChess in BLACK and moveChess in BLACK):                    
                     if moveChess == RED[5] and (old[0] > 4 and abs(old[1] - new[1]) == 1 and old[0] == new[0] or new == [old[0]+1, old[1]]):
                             self.move(old, new, RED[5])
                     elif moveChess == BLACK[5] and (old[0] < 5 and abs(old[1] - new[1]) == 1 and old[0] == new[0] or new == [old[0]-1, old[1]]):
@@ -668,37 +674,30 @@ class HackChat:
                     else: self.sendMsg(f"不符合{moveChess}的行棋规则")
                 else: self.sendMsg("不能吃自己也不能用别人的棋子！")
             else: self.sendMsg("不能挪动空气！")
-        elif msg == "开始游戏":
-            if not thingsList[0]:
-                if redBlack[1]:
-                    self.sendMsg("游戏已经开始了，等到下局吧~")
-                else:
-                    thingsList[0] = True
-                    redBlack[0] = sender
-                    CBL[0] = INIT.copy()
-                    self.sendMsg("游戏创建好了，快找人来加入吧！")
-            else: self.sendMsg("已经开始了，快找对手来玩吧！")
         elif msg == "加入游戏":
-            if not redBlack[0]:
-                self.sendMsg("现在，还没有游戏哦~快使用 开始游戏 创建一个吧~")
-            elif sender == redBlack[0]:
+            if not CCList[3][0]:
+                CCList[3][0] = sender
+                CBL[0] = INIT.copy()
+                self.sendMsg("游戏创建好了，快找人来加入吧！")
+            elif sender == CCList[3][0]:
                 self.sendMsg("你已经，加入过了哦~")
-            elif redBlack[1]:
+            elif CCList[3][1]:
                 self.sendMsg("游戏已经开始了，等到下局吧~")
             else:
-                redBlack[1] = sender
+                CCList[0] = True
+                CCList[3][1] = sender
                 self._sendBoard()
                 self.sendMsg(RULE)
-                thingsList[1] = redBlack[0]
-                self.sendMsg(f"@{redBlack[0]} 先手执红（绿？）（上方，简体），@{redBlack[1]} 后手执黑（下方，繁体）。开始了哦~")
-        elif msg == "结束游戏" and sender in redBlack:
-            if not thingsList[2]:
-                thingsList[2] = sender
+                CCList[1] = CCList[3][0]
+                self.sendMsg(f"@{CCList[3][0]} 先手执红（绿？）（上方，简体），@{CCList[3][1]} 后手执黑（下方，繁体）。开始了哦~")
+        elif msg == "结束游戏" and sender in CCList[3]:
+            if not CCList[2]:
+                CCList[2] = sender
                 self.sendMsg("结束游戏需要双方都发送。")
-            elif thingsList[2] != sender:
+            elif CCList[2] != sender:
                 self._endGame()
                 self.sendMsg(f"啊，虽然有点儿遗憾不过，既然{sender}说结束了的话就结束吧……发送开始游戏可以再次开始哦~")
-                thingsList[2] = None
+                CCList[2] = None
             else: self.sendMsg("结束游戏需要双方都发送。")
         elif msg == "帮助":
             self.sendMsg(CCMENU.replace("sender", sender))
@@ -721,7 +720,7 @@ class HackChat:
             elif inputs == "-users":
                 print(",".join(self.onlineUsers))
             elif inputs[:4] == "-st ":
-                thingsList[3] = eval(inputs[3:])
+                sysList[0] = eval(inputs[3:])
             else: self.sendMsg(inputs)
     def _clock(self):
         """既然整点了肯定就要刷一刷存在咯~"""
@@ -729,9 +728,9 @@ class HackChat:
             count = time.localtime(time.time())
             time.sleep(3600 - count.tm_min*60 - count.tm_sec + 28.5)
             hour = (count.tm_hour + 1) % 24
-            if thingsList[3]: self.sendMsg(colorPic())
-            if thingsList[5]: chat.sendMsg(f"已经{hour}点了啊。")
-            if hour == 0: thingsList[9] = nowDay()
+            if sysList[0]: self.sendMsg(colorPic())
+            if sysList[1]: chat.sendMsg(f"已经{hour}点了啊。")
+            if hour == 0: sysList[3] = nowDay()
     def run(self):
         """开始营业咯，好兴奋好兴奋"""
         try:
@@ -740,7 +739,7 @@ class HackChat:
                 cmd = result["cmd"]
                 rnick = result.get("nick")
 
-                if (not thingsList[8]) or (thingsList[8] and result.get("trip") in whiteList): 
+                if (not sysList[2]) or (sysList[2] and result.get("trip") in whiteList): 
                     # print(result)
                     # 接收到消息！
                     if cmd == "chat":
