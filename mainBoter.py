@@ -165,9 +165,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 else: raise ValueError
             except ValueError: chat.sendMsg(f"/w {sender} 然而peep后面需要一个非零整数")
         elif command == "welc ":
-            if (text := msg[6:])[:1] == "/":
-                chat.sendMsg("诶！你想干什么？真是坏心眼~")
-            elif senderTrip:
+            if senderTrip:
                 userData["welText"][senderTrip] = text
                 writeJson("userData.json", userData)
                 chat.sendMsg(f"为识别码{senderTrip}设置欢迎语成功了！")
@@ -215,11 +213,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             else:
                 ans = " ".join(array[2:])
                 quest = textPure(array[1])
-                if array[2:][0] == "/":
-                    chat.sendMsg("？你想干什么(⊙﹏⊙)")
-                    return
-                elif not quest in answer: answer[quest] = ans
-                else: answer[quest].append(ans)
+                if not quest in answer: answer[quest] = [ans]
+                else: answer[quest].append(" "+ans)
                 chat.sendMsg(f"添加成功(☆▽☆)")
                 writeJson("answer.json", answer)
 
@@ -518,7 +513,7 @@ def join(chat, joiner: str, color: str, result: dict):
         'channel': str, 'time': int}'''
     chat.onlineUsers.append(joiner)
     trip, hash_ = result.get("trip"), result["hash"]
-    msg = dic[trip] if trip in (dic:=userData["welText"]) else random.choice(RANDLIS[3]).replace("joiner", joiner)
+    msg = " "+dic[trip] if trip in (dic:=userData["welText"]) else random.choice(RANDLIS[3]).replace("joiner", joiner)
     userColor[joiner], userHash[joiner], userTrip[joiner] = color, hash_, trip
     logs(f"{joiner}加入")
     if names := data.get(hash_):
