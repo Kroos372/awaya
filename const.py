@@ -151,7 +151,9 @@ ADMMENU = [
     "|:-:|:-:|:-:|:-:|",
     "|0setu 0或1|涩图开关，0关1开|0setu 1| 实际上是int后面的语句 |",
     "|0time 0或1|报时开关，同上|0time 0|同上|",
-    "|0kill 昵称| 使用LaTeX对某人进行刷屏 |0kill qaq|需要注意的是这只有在对方开启LaTeX的情况下才有用、|",
+    "|0kill 昵称| 使用LaTeX对某人进行刷屏并使用ModBot的kick |0kill qaq|需要注意的是这只有在对方开启LaTeX的情况下才有用、|",
+    "|0bans 昵称| 封禁某人，和kill一样，但会持续 | 0bans abcd | \\ |",
+    "|0uban 序号| 取消封禁某人 | 0uban abcd | \\ |",
     f"|0addb 昵称|添加黑名单用户（输入的是昵称，添加的是hash）|0addb {owner}| ==addb==lacklist user|",
     f"|0delb 昵称|删除黑名单用户|0delb {owner}| \\ |",
     f"|0addn 昵称|添加黑名单昵称|0addn {owner}| 同上 |",
@@ -165,8 +167,6 @@ OWNMENU = "\n".join(["只为主人提供的秘密服务❤~"] + ADMMENU[1:] + [
     f"|0igno 昵称|不记录某人消息|0igno @{owner}| `@`，省略，懂？最好在真心话的时候用。 |",
     f"|0unig 昵称|记录某人信息|0unig @{owner}| 同上 |",
     "|0stfu 0或1| 1为休眠，使bot只回复白名单用户，0为取消休眠 | 0stfu | 刷屏什么的去死好了。 |",
-    "|0bans 昵称| 封禁某人，和kill一样，但会持续 | 0bans abcd | \\ |",
-    "|0uban 序号| 取消封禁某人 | 0uban abcd | \\ |",
     "|0remake| 重启 |0remake|restart太长了|",
     "|0chkr 问题 序号|查看某个问题的回答或第序号个回答，序号可选。|0chkr 什么鬼| ==ch==ec==k== ==r==eply |",
     "|0delr 问题 序号|删除某个问题的回答或第序号个回答，序号可选。|0delr 什么鬼| \\ |",
@@ -280,6 +280,7 @@ LINE = {
     "listbn": bn,
     "listbl": bl,
     "listig": ig,
+    "listba": ban,
     "*bom": bom,
 }
 INLINE = {

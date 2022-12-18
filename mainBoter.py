@@ -156,7 +156,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         elif command == "peep ":
             try:
                 if msg[6:] == "0": raise ValueError
-                array = msg[6:].split(" ")
+                array = msg.split(" ")
                 if len(array)==2: 
                     want_peep = int(array[1])
                     if want_peep < 0: chat.sendMsg(f"/w {sender} 以下是从最前面到第{-want_peep}条的消息：\n"+ "\n".join(allMsg[:-want_peep]))
@@ -384,7 +384,18 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             chat.sendMsg("自动变色ヽ(*。>Д<)o゜")
         elif command == "0kill ":
             chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
-            chat.sendMsg("杀了。")
+            chat.sendMsg(f"~kick {msg[6:]}")
+        elif command == "0bans ":
+            if not (hash_:=userHash[namePure(msg[6:])]) in banned:
+                banned.append(hash_)
+                chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
+                chat.sendMsg(f"~kick {msg[6:]}")
+            else:
+                chat.sendMsg("他/她已经被封了！")
+        elif command == "0uban ":
+            try: banned.pop(int(msg[6:]))
+            except: chat.sendMsg("命令错了。。。")
+            else: chat.sendMsg("删除成功！")
         elif senderTrip == OWNER:
             if command == "0addw ":
                 if not (name:=msg[6:12]) in whiteList:
@@ -410,16 +421,6 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg(f"恢复记录{name}的消息成功了~")
                 else: chat.sendMsg("好消息是他/她的信息本来就被记录着~")
-            elif command == "0bans ":
-                if not (hash_:=userHash[namePure(msg[6:])]) in banned:
-                    banned.append(hash_)
-                    chat.sendMsg(f"好好好！")
-                else:
-                    chat.sendMsg("他/她已经被封了！")
-            elif command == "0uban ":
-                try: banned.pop(int(msg[6:]))
-                except: chat.sendMsg("命令错了。。。")
-                else: chat.sendMsg("删除成功！")
             elif command == "0chkr ":
                 array = msg.split()
                 if len(array) >= 2:
@@ -496,7 +497,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 os.execl(p, p, *sys.argv)
     elif rans > 130 and allMsg:
         if rans == 133:
-            chat.sendMsg(random.choice(allMsg).split("：")[1])
+            chat.sendMsg(" "+random.choice(allMsg).split("：")[1])
         else:
             chat.sendMsg(random.choice(RANDLIS[2]).replace("sender", sender))
     else:
@@ -526,7 +527,9 @@ def join(chat, joiner: str, color: str, result: dict):
         if joiner == v[1]:
             chat.sendMsg(f"/w {joiner} {v[0]}曾在（{time.ctime(k)}）给您留言：{v[2]}")
             del leftMsg[k]
-    if hash_ in banned: chat.sendMsg(f"/w {joiner} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
+    if hash_ in banned:
+        chat.sendMsg(f"/w {joiner} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
+        chat.sendMsg(f"~kick {joiner}")
     else: chat.sendMsg(msg)
 
 def onSet(chat, result: dict):
@@ -725,8 +728,10 @@ class HackChat:
         while True:
             count = time.localtime(time.time())
             time.sleep(3600 - count.tm_min*60 - count.tm_sec + 28.5)
+            hour = (count.tm_hour + 1) % 24
             if thingsList[3]: self.sendMsg(colorPic())
-            if thingsList[5]: chat.sendMsg(f"已经{(count.tm_hour + 1) % 24}点了啊。")
+            if thingsList[5]: chat.sendMsg(f"已经{hour}点了啊。")
+            if hour == 0: thingsList[9] = nowDay()
     def run(self):
         """开始营业咯，好兴奋好兴奋"""
         try:
@@ -759,7 +764,7 @@ class HackChat:
                     # 有新人来！
                     if cmd == "onlineAdd":
                         self.onlineUsers.append(rnick)
-                        userColor[joiner], userHash[joiner], userTrip[joiner] = \
+                        userColor[rnick], userHash[rnick], userTrip[rnick] = \
                             result.get("color"), result["hash"], result.get("trip")
                     # 有人离开……
                     elif cmd == "onlineRemove": leave(self, rnick)
