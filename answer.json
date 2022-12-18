@@ -15,7 +15,7 @@
     "别忘了这里哦~",
     "see u"
   ],
-  "图片": [
+  "^图片$": [
     "![](https://i.gyazo.com/5204b826cc551922dc9a08fb56dfe5a5.jpg)",
     "![](https://i.gyazo.com/265076336953c2f37c6a36ff53e095a6.jpg)",
     "![](https://i.gyazo.com/d4f5df785066e052b4f0fd75a28a5fe4.jpg)",

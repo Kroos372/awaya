@@ -14,9 +14,9 @@ def textPure(text: str) -> str: return text.replace("\\~", "~").replace("~", " "
 def randomDesign(num: int=1) -> str:
     full = []
     if num > 10:
-        return "最多一次性获取10个！"
+        return "最多一次性获取10个(〃｀ 3′〃)"
     elif num < 1:
-        return "最少获取一个！"
+        return "最少获取一个(〃｀ 3′〃)"
     for i in range(num):
         item = random.choice(designs["items"])
         const = random.choice(designs["constraints"])
@@ -28,7 +28,7 @@ def randomDesign(num: int=1) -> str:
     return "，\n".join(full)
 # 分解质因数！这是我的数学极限了，呜呜……
 def getPrime(i, factors) -> list:
-    if i == 1: return ["没法分解啊啊啊啊！"]
+    if i == 1: return ["没法分解啊啊啊啊(+﹏+)"]
     for x in range(2, int(i**0.5 + 1)):
         if i % x == 0:
             factors.append(str(x))
@@ -46,11 +46,11 @@ def rollTo1(maxNum: int=1000) -> str:
     return f"{'，'.join(road)}：{len(road)}"
 def hashByCode(code: str) -> str:
     try: return "，".join(data[code])
-    except: return "不存在这个hash码"
+    except: return "不存在这个hash码(◐_◑)"
 def hashByName(name: str, now: bool=False) -> str:
     if now:
         try: return hashByCode(userHash[name])
-        except: return "此人当前不在线！"
+        except: return "此人当前不在线( ⊙ o ⊙ )"
     else:
         l, count = [], 0
         for i in data.values():
@@ -119,7 +119,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
     if userTrip.get(sender) in blackList or sender in blackName: return
 
     if (mes := afk.get(sender)) is not None:
-        chat.sendMsg(f"@{sender} 不再{mes}了，欢迎回来~~摸鱼~~！")
+        chat.sendMsg(f"@{sender} 不再{mes}了，欢迎回来~~摸鱼~~(\\*￣ω￣)")
         del afk[sender]
     elif msg.lower() == "afk":
         mes = "AFK"
@@ -127,12 +127,12 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         afk[sender] = mes
     elif msg[:4].lower() == "afk ":
         mes = msg[4:]
-        chat.sendMsg(f"@{sender} 正在{mes}~~，加油~~！")
+        chat.sendMsg(f"@{sender} 正在{mes}~~，加油~~ヾ(◍°∇°◍)ﾉﾞ")
         afk[sender] = mes
     else:
         for user in afk:
             if f"@{user.lower()}" in msg.lower():
-                chat.sendMsg(f"{user} 正在{afk[user]}，请不要打扰ta……")
+                chat.sendMsg(f"{user} 正在{afk[user]}，请不要打扰ta……(\\* \"･∀･)ﾉ――◎")
     if msg[0] == PREFIX:
         command = msg[1:6]
         if command == "hash ": chat.sendMsg(hashByName(namePure(msg[6:])))
@@ -141,8 +141,8 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         elif command == "colo ":
             if (color := userColor.get(namePure(msg[6:]))) is not None:
                 if color: chat.sendMsg(color)
-                else: chat.sendMsg("该用户还没有设置颜色！")
-            else: chat.sendMsg("没有这个用户！")
+                else: chat.sendMsg("该用户还没有设置颜色(￢_￢)")
+            else: chat.sendMsg("没有这个用户(╰_╯)#")
         elif command == "left ":
             if len(lis := msg.split()) < 3:
                 chat.sendMsg("命令不正确！")
@@ -203,24 +203,24 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 digit = msg[6:19]
                 eq = "\\*".join(getPrime(int(digit), []))
                 chat.sendMsg(f"{digit}={eq}")
-            except ValueError: chat.sendMsg("请输入一个***正整数***啊啊啊啊！")
+            except ValueError: chat.sendMsg("请输入一个***正整数***啊啊啊啊(￢_￢)")
         elif command == "rand ":
             try:
                 digit = int(msg[6:])
                 chat.sendMsg(randomDesign(digit))
-            except ValueError: chat.sendMsg("参数必须是1到10之间的正整数！")
+            except ValueError: chat.sendMsg("参数必须是1到10之间的正整数(￣_,￣ )")
         elif command == "repl ":
             array = msg.split(" ")
-            if len(array) < 3: chat.sendMsg(f"命令错误，请使用`{PREFIX}repl 提问 回答`的格式！")
+            if len(array) < 3: chat.sendMsg(f"命令错误，请使用`{PREFIX}repl 提问 回答`的格式(‾◡◝)")
             else:
                 ans = "".join(array[2:])
                 quest = textPure(array[1])
                 if array[2:][0] == "/":
-                    chat.sendMsg("？你想干什么")
+                    chat.sendMsg("？你想干什么(⊙﹏⊙)")
                     return
                 elif not quest in answer: answer[quest] = ans
                 else: answer[quest].append(ans)
-                chat.sendMsg(f"添加成功！")
+                chat.sendMsg(f"添加成功(☆▽☆)")
                 writeJson("answer.json", answer)
 
     elif msg.strip() == f"@{nick}":
@@ -233,9 +233,9 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
             ranNum = random.randint(1, 1000)
             if thingsList[4]:
                 if sender in thingsList[6]:
-                    chat.sendMsg(f"{sender}已经摇出{thingsList[6][sender]}了")
+                    chat.sendMsg(f"{sender}已经摇出{thingsList[6][sender]}了(ﾉ\"◑ڡ◑)ﾉ")
                 elif (hashCode := userHash[sender] ) in thingsList[7]:
-                    chat.sendMsg(f"{sender}，不要想开小号哦~")
+                    chat.sendMsg(f"{sender}，不要想开小号哦(￢з￢)σ ")
                 else:
                     thingsList[6][sender] = ranNum
                     chat.sendMsg(str(ranNum))
@@ -264,7 +264,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 chat.sendMsg(f"{digit}={eq}")
     elif msg == "结算":
         if thingsList[4]:
-            if len(thingsList[7]) < 2: chat.sendMsg("有句话叫什么，一个巴掌拍不响？")
+            if len(thingsList[7]) < 2: chat.sendMsg("有句话叫什么，一个巴掌拍不响(°o°；)")
             else:
                 sort = sorted(thingsList[6].items(), key=lambda x: x[1])
                 loser, winner = sort[0], sort[-1]
@@ -273,36 +273,36 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                 chat.sendMsg(fin)
                 thingsList[6] = {}
                 thingsList[7] = []
-        else: chat.sendMsg(f"真心话就没开始你在结算什么呢，{sender}~")
+        else: chat.sendMsg(f"真心话就没开始你在结算什么呢，{sender}(▼皿▼#)")
     elif msg == "真心话":
         if not thingsList[4]:
             chat.sendMsg(GAMEMENU)
             thingsList[4] = True
-        else: chat.sendMsg("已经在玩了哦？")
+        else: chat.sendMsg("已经在玩了哦╮(╯_╰)╭")
     elif msg == "结束游戏" and thingsList[4]:
-        chat.sendMsg("好吧好吧，结束咯~")
+        chat.sendMsg("好吧好吧，结束咯(一。一;;）")
         thingsList[4] = False
     elif msg[:2] == "b " and bombs[5] and sender == bombs[1][bombs[2]]:
         try: num = int(msg[2:])
-        except: chat.sendMsg("请输入一个整数！")
+        except: chat.sendMsg("请输入一个整数ヾ|≧_≦|〃")
         else: bombRule(chat, num)
     elif msg == "bomber":
         if not bombs[5]:
             if not sender in bombs[1]:
                 bombs[1].append(sender)
-                chat.sendMsg("您已成功加入游戏！")
-            else: chat.sendMsg("您已经加入过了！")
-        else: chat.sendMsg("这局已经开始了，等下局吧~")
+                chat.sendMsg("您已成功加入游戏・▽・)ノ ")
+            else: chat.sendMsg("您已经加入过了(￣▽￣)")
+        else: chat.sendMsg("这局已经开始了，等下局吧(￣▽￣)")
     elif msg == "开始b" and not bombs[5]:
         if len(bombs[1]) > 1:
             bombs[5], bombs[6], bombs[7] = True, bombs[3], bombs[4]
             bombs[0] = random.randint(bombs[3], bombs[4])
             chat.sendMsg(f"炸弹已经设置好了，范围在{bombs[3]}到{bombs[4]}（包含两数）之间！\n由@{bombs[1][0]} 开始，发送==b 数字==游玩！")
             if bombs[1][0] == nick: bombRule(chat)
-        else: chat.sendMsg("至少需要两个人才能开始！")
+        else: chat.sendMsg("至少需要两个人才能开始(⊙﹏⊙)")
     elif msg == "结束b" and bombs[5]:
         endBomb()
-        chat.sendMsg("好吧好吧，结束咯~")
+        chat.sendMsg("好吧好吧，结束咯_(:зゝ∠)\\_")
     elif msg[:2] == "菜单" or msg[:4] == "menu":
         if msg == "菜单":
             if senderTrip == OWNER: men = "\n".join(MENU+MENUSSP)
@@ -330,7 +330,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         if hasattr(call, "__call__"): chat.sendMsg(call(sender))
         else: chat.sendMsg(random.choice(call).replace("sender", sender))
     # 白名单功能，阿瓦娅的VIP用户捏~
-    elif msg[0] == "0" and (trip_:=senderTrip) in whiteList:
+    elif msg[0] == "0" and senderTrip in whiteList:
         # 涩涩，没有涩涩我要死了！！！
         if command == "0setu ":
             try:
@@ -345,7 +345,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg("好好好，又进去了一个。")
                 else: chat.sendMsg("可惜他/她已经在咯~")
-            except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
+            except KeyError: chat.sendMsg("可惜这人现在不在呢…(⊙＿⊙；)…")
         elif command == "0delb ":
             try:
                 if (hash_:=userHash[namePure(msg[6:])]) in blackList:
@@ -353,7 +353,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg("删除黑名单用户成功！")
                 else: chat.sendMsg("这人不在小黑屋里哦？")
-            except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
+            except KeyError: chat.sendMsg("可惜这人现在不在呢…(⊙＿⊙；)…")
         elif command == "0addn ":
             try:
                 if not (name:=namePure(msg[6:])) in blackName:
@@ -361,7 +361,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg("好好好，又进去了一个。")
                 else: chat.sendMsg("可惜他/她已经在咯~")
-            except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
+            except KeyError: chat.sendMsg("可惜这人现在不在呢…(⊙＿⊙；)…")
         elif command == "0deln ":
             try:
                 if (name:=namePure(msg[6:])) in blackName:
@@ -369,7 +369,7 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
                     writeJson("userData.json", userData)
                     chat.sendMsg("删除黑名单用户成功！")
                 else: chat.sendMsg("这人不在小黑屋里哦？")
-            except KeyError: chat.sendMsg("可惜这人现在不在呢（后仰）")
+            except KeyError: chat.sendMsg("可惜这人现在不在呢…(⊙＿⊙；)…")
         elif command == "0time ":
             try:
                 thingsList[5] = int(msg[6:])
@@ -379,22 +379,25 @@ def msgGot(chat, msg: str, sender: str, senderTrip: str):
         elif command == "0bcol ":
             chat.sendMsg(f"/color {msg[6:]}")
             chat.sendMsg("自动变色ヽ(*。>Д<)o゜")
+        elif msg == "rcolor":
+            chat.sendMsg(f"/color {hex(random.randint(0, 0xffffff))[2:]:0>6}")
+            chat.sendMsg("自动变色ヽ(*。>Д<)o゜")
         elif command == "0kill ":
             chat.sendMsg(f"/w {msg[6:]} "+"$\\begin{pmatrix}qaq\\\\[999999999em]\\end{pmatrix}$")
             chat.sendMsg("杀了。")
-        elif trip_ == OWNER:
+        elif senderTrip == OWNER:
             if command == "0addw ":
                 if not (name:=msg[6:12]) in whiteList:
                     whiteList.append(name)
                     writeJson("userData.json", userData)
-                    chat.sendMsg("添加特殊服务的家伙咯~")
-                else: chat.sendMsg("你要找的人并不在这里面~")
+                    chat.sendMsg("添加特殊服务的家伙咯╰(￣▽￣)╮")
+                else: chat.sendMsg("你要找的人并不在这里面(๑°ㅁ°๑)‼")
             elif command == "0delw ":
                 if (name:=msg[6:12]) in whiteList:
                     whiteList.remove(msg[6:12])
                     writeJson("userData.json", userData)
-                    chat.sendMsg("删除白名单用户成功！")
-                else: chat.sendMsg("你要找的人并不在这里面~")
+                    chat.sendMsg("删除白名单用户成功๑乛◡乛๑")
+                else: chat.sendMsg("你要找的人并不在这里面( ˃᷄˶˶̫˶˂᷅ )")
             elif command == "0igno ":
                 if not (name:=namePure(msg[6:])) in ignored:
                     ignored.append(name)
@@ -752,6 +755,16 @@ class HackChat:
                         else: time.sleep(2)
                     # 当然要用最好的状态迎接开始啦！
                     elif cmd == "onlineSet": onSet(self, result)
+                else:
+                    # 有新人来！
+                    if cmd == "onlineAdd":
+                        self.onlineUsers.append(rnick)
+                        userColor[joiner], userHash[joiner], userTrip[joiner] = \
+                            result.get("color"), result["hash"], result.get("trip")
+                    # 有人离开……
+                    elif cmd == "onlineRemove": leave(self, rnick)
+                    elif cmd == "updateUser": changeColor(self, result)
+
         # 坏心眼……
         except BaseException as e:
             with open(f"traceback/{time.time()}.txt", "w", encoding="utf8") as f:
