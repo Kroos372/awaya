@@ -39,7 +39,7 @@ class Awaya:
                 self.nicks = []
                 self.nick = nick
 
-                self._sendPacket({"cmd": "join", "channel": self.channel, "nick": f"{nick}#{passwd}"})
+                self._sendPacket({"cmd": "join", "channel": self.channel, "nick": f"{nick}#{passwd}"}, True)
                 return
     def _sendPacket(self, packet: dict, force: bool=False):
         if (not sysList[2]) or (self.users.getAttr(sysList[4], "trip") in whiteList) or force:
@@ -151,7 +151,7 @@ class Awaya:
             error = traceback.format_exc(chain=False)
             with open(f"traceback/{filename}.txt", "w", encoding="utf8") as f:
                 f.write(error)
-            self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{error}\n```", True)
+            self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}\n```", True)
             if sysList[5]:
                 time.sleep(6)
                 self._reconnect()
@@ -848,7 +848,7 @@ class Awaya:
         私信别人时(几把hc):
            {"cmd": "info", "channel": str, "from": int, "to": int,
             "text": str, "type": "whisper", "time": int}"""
-        if sender == result["to"]:
+        if isinstance(sender, int):
             return
         else:
             sysList[4] = sender

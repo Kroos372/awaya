@@ -303,7 +303,7 @@ class Peeper:
                 return toWeb(res)
             else:
                 return f"：\n{res}"
-        except ValueError:
+        except (ValueError, IndexError):
             return "然而peep后面需要一个非零整数"
     @staticmethod
     def addCustom(origin, mode, text) -> str:
