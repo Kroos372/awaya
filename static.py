@@ -155,7 +155,7 @@ def verify(type_, text):
         return None # 乖巧
 ## 又加回来了
 def colorPic(args: str="") -> str:
-    if args:
+    if not args:
         loli = "https://api.lolicon.app/setu/v2"
     else:
         loli = "https://api.lolicon.app/setu/v2?" + args
@@ -441,11 +441,11 @@ class Sawer:
         if not user:
             return "此人还没有光顾此处的样子(◐_◑)"
         if isinstance(user, str):
-            observer = f"最后一次见到trip为{user}的用户是在{ftime(ltime)}（距现在{timeDiff(now() - ltime)}）\n"
+            type_ = "trip"
+            text = user
             user = self.last["trip"][user]
-        else:
-            observer = f"最后一次见到{type_}为{text}的用户是在{ftime(ltime)}（距现在{timeDiff(now() - ltime)}）\n"
         ltime = user["time"]
+        observer = f"最后一次见到{type_}为{text}的用户是在{ftime(ltime)}（距现在{timeDiff(now() - ltime)}）\n"
         if user["msg"] is not None:
             observer += f"他说了：{user['msg'][:50]}"
         else:

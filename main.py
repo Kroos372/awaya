@@ -128,9 +128,7 @@ class Awaya:
                     self.onEmote(result["nick"], result["text"])
                 elif cmd == "info":
                     if result.get("type") == "whisper":
-                        froms = result["from"]
-                        if not isinstance(froms, int):
-                            self.onWhisper(froms, result["text"].split(": ", 1)[1], result)
+                        self.onWhisper(result["from"], result["text"].split(": ", 1)[1], result)
                     else:
                         self.onInfo(result["text"])
                 elif cmd == "updateUser":
@@ -850,8 +848,11 @@ class Awaya:
         私信别人时(几把hc):
            {"cmd": "info", "channel": str, "from": int, "to": int,
             "text": str, "type": "whisper", "time": int}"""
-        sysList[4] = sender
-        self.onMsg(msg, sender, result.get("trip"), "whisper")
+        if sender == result["to"]:
+            return
+        else:
+            sysList[4] = sender
+            self.onMsg(msg, sender, result.get("trip"), "whisper")
     def onEmote(self, sender: str, msg: str):
         """{"cmd": "emote", "nick": str, "userid": int, "text": str,
             "channel": str, ?"trip": str, "time": int}"""
