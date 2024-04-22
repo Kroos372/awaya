@@ -198,16 +198,22 @@ class Awaya:
                 return self.kick(sender)
         return ""
     # 踢
-    def kick(self, *nicks) -> str:
+    def kick(self, *nicks, assert_: bool=False):
         kkNicks = []
         for nick in nicks:
             if nick == self.nick or self.users.getAttr(nick, "trip") in whiteList:
-                continue
+                if assert_:
+                    return None
+                else:
+                    continue
             else:
                 kkNicks.append(nick)
         if kkNicks:
             return KICK + " " + " ".join(kkNicks)
         return ""
+    ## 多线程updatemsg
+    def updateFunc(self, func, cid, *args):
+        threading.Thread(target=lambda: self.updateMsg("overwrite", func(*args), cid)).start()
 
     def selfSelf(self, context, msg, sender, trip, type_, **kwargs):
         # 日志, 添加look与seen
@@ -217,6 +223,9 @@ class Awaya:
             self.looker.add(sender)
         elif sender != self.nick:
             self.log(f"{sender}私信：{msg}")
+        # stfu
+        if sysList[2] and (self.users.getAttr(sysList[4], "trip") not in whiteList):
+            return
         # 处理自己
         if sender == self.nick:
             if sysList[8]:
@@ -236,7 +245,7 @@ class Awaya:
                 sysList[9].append(msg)
         elif trip not in whiteList:
             # 私信rl更严
-            context.appText(self.rl(sender, msg, len(msg)/256 + 1), "part")
+            context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part")
 
         command = msg.split()[0]
         if msg[0] == WHTFIX and trip in whiteList:
@@ -311,12 +320,13 @@ class Awaya:
                         bloods[1] = "hash"
                         bloods.append(hash_)
                 attr = namePure(bloods[2])
-                nick = self.users.attrGet(bloods[1], attr)
-                if nick == self.nick or self.users.getAttr(nick, "trip") in whiteList:
-                    context.appText("6")
-                else:
+                nicks = self.users.attrsGet(bloods[1], attr)
+                assert_ = self.kick(nicks, True)
+                if assert_:
                     context.appText(banned.add(bloods[1], attr))
-                    context.appText(self.kick(nick), "part")
+                    context.appText(assert_, "part")
+                else:
+                    context.appText("6")
             elif command == "uban":
                 bloods = msg.split()
                 if len(bloods) < 2:
@@ -412,7 +422,7 @@ class Awaya:
                     cid = getStr(6)
                     context.appText("桥豆麻袋", "part", cid=cid)
                     kita = ListChat(self, msg[6:], cid, self.passwd)
-                    threading.Thread(target=kita.rock).start()
+                    self.updateFunc(kita.rock, cid)
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
@@ -438,7 +448,7 @@ class Awaya:
             elif command == "kkal":
                 try:
                     chocol = int(msg[6:])
-                    context.appText(self.kick(self.nicks[-chocol:]), "part")
+                    context.appText(self.kick(*self.nicks[-chocol:]), "part")
                 except ValueError:
                     context.appText("寄了吧你")
             elif command == "chkr":
@@ -697,7 +707,9 @@ class Awaya:
                 if setuRl.frisk("*", 1):
                     context.appText("rl乐，别涩涩了")
                 else:
-                    context.appText(colorPic(msg[6:]))
+                    cid = getStr(6)
+                    context.appText("少女祈祷中. . .", "part", cid=cid)
+                    self.updateFunc(colorPic, cid, msg[6:])
         elif namePure(msg) == self.nick:
             if icb9 > 130:
                 context.appText(random.choice(replys[1]).replace("sender", sender))

@@ -116,11 +116,14 @@ def getStr(length=16) -> str:
     return dinnerbone
 ## 名字提纯
 def namePure(name: str) -> str:
-    return name.replace("@", "").replace(" ", "")
-## 内容转换
+    return name.strip("@").strip()
+## 自定义回复的空格转换
 def textPure(text: str) -> str:
     return text.replace("\\~", "~").replace("~", " ")
-## Markdown人名
+## 防止md代码块导致的排版错乱
+def mdPure(text: str) -> str:
+    return re.sub("(~~~|```)", r"\\\1", text)
+## 防止md下划线导致的排版错乱
 def nameMd(name: str) -> str:
     return name.replace("_", "\\_")
 ## 时间差
@@ -154,7 +157,7 @@ def verify(type_, text):
     else:
         return None # 乖巧
 ## 又加回来了
-def colorPic(args: str="") -> str:
+def colorPic(args: str=""):
     if not args:
         loli = "https://api.lolicon.app/setu/v2"
     else:
@@ -277,7 +280,7 @@ class Peeper:
             array = self.allMsg[i1:i2]
         for i in array:
             nick = nameMd(i["nick"])
-            text = re.sub("(~~~|```)", r"\\\1", i["text"])
+            text = mdPure(i["text"])
             flower.append(f"{nick}: {text}")
         return "\n\n".join(flower)
     def getLong(self, index):
@@ -336,6 +339,12 @@ class Users:
             if maggie[attr] == value:
                 return nick
         return None # 乖巧
+    def attrsGet(self, attr, value) -> list:
+        zhuyue = []
+        for nick, maggie in self.data.items():
+            if maggie[attr] == value:
+                zhuyue.append(nick) 
+        return zhuyue
     def changeAttr(self, nick, attr, value):
         self.data[nick][attr] = value
 ## 挂机器
@@ -408,9 +417,11 @@ class Lefter:
             else:
                 for yaya in tusk:
                     if yaya[1]:
-                        k24.append(f"{nameMd(yaya[0])}#{yaya[1]} 曾在（{yaya[2]}）通过{type_}给您留言：\n{yaya[3]}")
+                        k24.append(f"{nameMd(yaya[0])}#{yaya[1]} 曾在" + 
+                            f"（{yaya[2]}）通过{type_}给您留言：\n{mdPure(yaya[3])}")
                     else:
-                        k24.append(f"{nameMd(yaya[0])} 曾在（{yaya[2]}）通过{type_}给您留言：\n{yaya[3]}")
+                        k24.append(f"{nameMd(yaya[0])} 曾在" + 
+                            f"（{yaya[2]}）通过{type_}给您留言：\n{mdPure(yaya[3])}")
                 self._writeJson()
         return "\n\n".join(k24)
     def _writeJson(self):
@@ -494,7 +505,7 @@ class ListChat:
             self.ws.send(encoded)
         except websocket.WebSocketException:
             pass
-    def rock(self):
+    def rock(self) -> str:
         self.ws = websocket.create_connection(
             "wss://hack.chat/chat-ws"
         )
@@ -525,11 +536,8 @@ class ListChat:
                     else:
                         trip = ""
                     starry += f"{user['nick']}{trip}, {user['hash']}\n"
-                if not starry:
-                    starry = "空空如也~"
                 self.ws.close()
-                self.chat.updateMsg("overwrite", starry, self.customId)
-                break
+                return starry or "空空如也~"
     # 重启
     def remake(self, pswd=""):
         self.ws.close()
@@ -559,8 +567,12 @@ class Black:
         if not (verify(type_, to) and type_ in self.data):
             return "参数不合法！"
         else:
-            self.data[type_].remove(to)
-            self._writeJson()
+            try:
+                self.data[type_].remove(to)
+            except:
+                return "没有"
+            else:
+                self._writeJson()
         return "好好好，又出去了一个"
     def check(self, **kwargs) -> bool:
         for type_, to in kwargs.items():
@@ -585,7 +597,7 @@ class Black:
 ## 忽略名单
 class Ignore(Black):
     def _writeJson(self):
-        userData["Ignore"] = self.data
+        userData["ignore"] = self.data
         writeJson("userData.json", userData)
 ## 封禁名单
 class Ban(Black):
@@ -1030,7 +1042,7 @@ protect =  userData["protect"]
 keys = userData["keys"]
 welcome = userData["welText"]
 
-msgRl = RateLimiter(30, 12)
+msgRl = RateLimiter(40, 10)
 joinRl = RateLimiter(5, 7)
 wordRl = RateLimiter(30, 3)
 setuRl = RateLimiter(25, 5)

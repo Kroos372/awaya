@@ -1,8 +1,8 @@
 # awa_ya 阿瓦娅
 ## Chinese ver.
 ### 介绍
-一个普通的机器人，不出意外的话现在在[https://hack.chat/?lounge](https://hack.chat/?lounge)中运行，有任何问题都可以来这找识别码是coBad2（或者9kQGU6）的笨蛋。  
-  
+一个普通的机器人，曾经在[https://hack.chat/?lounge](https://hack.chat/?lounge)中运行，如今葬在了兰枝唯一开着六道木的樱树下，主人是某个识别码是coBad2（或者9kQGU6）的笨蛋。  
+
 重编写自[HackChat库](https://github.com/gkbrk/hackchat)。  
 
 ### 用法
@@ -18,11 +18,11 @@
 4. 运行[main.py](main.py)。  
 
 ### 别的
-特别感谢[DPG](https://github.com/Doppelganger-phi)与[Blaze](https://github.com/geGDVS)提供或提供过的服务器支持。
+特别感谢[DPG](https://github.com/Doppelganger-phi)与[Blaze](https://github.com/geGDVS)提供过的服务器支持。
 
 ## English ver.
 ### Introduction
-A Normal BOT of hack.chat, runs in https://hack.chat/?lounge currently, chat with me there.  
+A Normal BOT of hack.chat, used to run in https://hack.chat/?lounge .  
   
 Rewriten from [HackChat](https://github.com/gkbrk/hackchat)。
 
@@ -36,4 +36,4 @@ Rewriten from [HackChat](https://github.com/gkbrk/hackchat)。
 4. Run [main.py](main.py).  
 
 ### Others
-Special thanks to [DPG](https://github.com/Doppelganger-phi) and [Blaze](https://github.com/geGDVS) for providing or having provided server support.
+Special thanks to [DPG](https://github.com/Doppelganger-phi) and [Blaze](https://github.com/geGDVS) for having provided server support.
