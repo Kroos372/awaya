@@ -189,7 +189,7 @@ class Awaya:
     # 发言与封禁词rl
     def rl(self, sender: str, msg: str, score: int=0) -> str:
         hash_ = self.users.getAttr(sender, "hash")
-        if msgRl.frisk(hash_, 0.9+len(msg)/256 + score):
+        if msgRl.frisk(hash_, 1+len(msg)/256 + score):
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
             return self.kick(sender)
         for word in banWords:
@@ -321,12 +321,13 @@ class Awaya:
                         bloods.append(hash_)
                 attr = namePure(bloods[2])
                 nicks = self.users.attrsGet(bloods[1], attr)
-                assert_ = self.kick(nicks, True)
-                if assert_:
-                    context.appText(banned.add(bloods[1], attr))
-                    context.appText(assert_, "part")
-                else:
-                    context.appText("6")
+                if nicks:
+                    assert_ = self.kick(nicks, True)
+                    if assert_:
+                        context.appText(banned.add(bloods[1], attr))
+                        context.appText(assert_, "part")
+                    else:
+                        context.appText("6")
             elif command == "uban":
                 bloods = msg.split()
                 if len(bloods) < 2:
@@ -699,6 +700,8 @@ class Awaya:
                 cmd = msg[6:]
                 if cmd in cmdList:
                     context.appText(cmdList[cmd]())
+                elif cmd == "afks":
+                    context.appText(afker.list())
                 elif cmd == self.channel:
                     context.appText(self.listNow())
                 else:
