@@ -550,8 +550,9 @@ class ListChat:
             ryo.rock()
 ## 黑名单
 class Black:
-    def __init__(self, data: dict):
-        self.data = data
+    def __init__(self, name: str):
+        self.name = name
+        self.data = userData[name]
     def add(self, type_, to) -> str:
         if not verify(type_, to):
             return "参数不合法！"
@@ -562,7 +563,7 @@ class Black:
         else:
             self.data[type_].append(to)
             self._writeJson()
-        return "好好好，又进去了一个"
+            return "好好好，又进去了一个"
     def delete(self, type_, to) -> str:
         if not (verify(type_, to) and type_ in self.data):
             return "参数不合法！"
@@ -592,18 +593,9 @@ class Black:
                 awaya.append(f"{k}: {uwuya}")
         return "\n".join(awaya)
     def _writeJson(self):
-        userData["black"] = self.data
+        userData[self.name] = self.data
         writeJson("userData.json", userData)
-## 忽略名单
-class Ignore(Black):
-    def _writeJson(self):
-        userData["ignore"] = self.data
-        writeJson("userData.json", userData)
-## 封禁名单
-class Ban(Black):
-    def _writeJson(self):
-        userData["banned"] = self.data
-        writeJson("userData.json", userData)
+
 ## hash器
 class Hasher:
     def __init__(self, data):
@@ -853,6 +845,22 @@ WTCOMMANDS = {
         "|描述: 将<值>移出对应类型的黑名单|",
         f"|例: {WHTFIX}delb hash akstnhmyrw|"
     ]),
+    "igno": "\n".join([
+        "# IGNOre:",
+        "||",
+        "|:-:|",
+        "|参数: <hash/trip/nick> <值>|",
+        "|描述: 将<值>加入对应类型的peep屏蔽列表|",
+        f"|例: {WHTFIX}igno nick _|"
+    ]),
+    "delb": "\n".join([
+        "# UN IGnore:",
+        "||",
+        "|:-:|",
+        "|参数: <hash/trip/nick> <值>|",
+        "|描述: 将<值>移出对应类型的peep屏蔽列表|",
+        f"|例: {WHTFIX}unig hash akstnhmyrw|"
+    ]),
     "kill": "\n".join([
         "# KILL:",
         "||",
@@ -1048,9 +1056,9 @@ wordRl = RateLimiter(30, 3)
 setuRl = RateLimiter(25, 5)
 left = Lefter(userData["leftMsg"])
 sawer = Sawer(userData["lastSaw"])
-black = Black(userData["black"])
-ignore = Ignore(userData["ignore"])
-banned = Ban(userData["banned"])
+black = Black("black")
+ignore = Black("ignore")
+banned = Black("banned")
 hasher = Hasher(data)
 
 lineReply = {

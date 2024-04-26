@@ -328,6 +328,8 @@ class Awaya:
                         context.appText(assert_, "part")
                     else:
                         context.appText("6")
+                else:
+                    context.appText(banned.add(bloods[1], attr))
             elif command == "uban":
                 bloods = msg.split()
                 if len(bloods) < 2:
@@ -598,7 +600,7 @@ class Awaya:
                     if color:
                         context.appText(color)
                     else:
-                        context.appText("该用户还没有设置颜色(￢_￢)")
+                        context.appText("RESET")
             elif command == "left":
                 mauver = re.sub(r"(```|~~~)", r"\\\1", msg).split(" ")
                 text = " ".join(mauver[2:])
@@ -823,7 +825,7 @@ class Awaya:
         self.users.delUser(leaver)
         self.looker.delUser(leaver)
     def onSet(self, result: dict):
-        """{'cmd': 'onlineSet', 'nicks': list, 'self.users': 
+        """{'cmd': 'onlineSet', 'nicks': list, 'users': 
             [{'channel': str, 'isme': bool,  'nick': str,  'trip': str, 
                 'uType': 'user', 'hash': str,  'level': int, 'userid': int, 
                 'isBot': False, 'color': str or False}],
