@@ -535,7 +535,7 @@ class ListChat:
                         trip = ", " + user["trip"]
                     else:
                         trip = ""
-                    starry += f"{user['nick']}{trip}, {user['hash']}\n"
+                    starry += f"=={user['nick']}=={trip}, {user['hash']}\n"
                 self.ws.close()
                 return starry or "空空如也~"
     # 重启
@@ -1050,10 +1050,10 @@ protect =  userData["protect"]
 keys = userData["keys"]
 welcome = userData["welText"]
 
-msgRl = RateLimiter(40, 10)
+msgRl = RateLimiter(20, 9)
 joinRl = RateLimiter(5, 7)
 wordRl = RateLimiter(30, 3)
-setuRl = RateLimiter(25, 5)
+setuRl = RateLimiter(40, 5)
 left = Lefter(userData["leftMsg"])
 sawer = Sawer(userData["lastSaw"])
 black = Black("black")

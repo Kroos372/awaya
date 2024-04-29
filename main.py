@@ -711,7 +711,7 @@ class Awaya:
             elif command == "setu":
                 if setuRl.frisk("*", 1):
                     context.appText("rl乐，别涩涩了")
-                else:
+                elif not sysList[2]:
                     cid = getStr(6)
                     context.appText("少女祈祷中. . .", "part", cid=cid)
                     self.updateFunc(colorPic, cid, msg[6:])
@@ -819,6 +819,7 @@ class Awaya:
         sawer.addUser(joiner, self.users.getAttr(joiner, "trip"), True)
         self.looker.addUser(joiner)
         self.whisper(joiner, left.check(**result))
+        self.rl(joiner, "", 1)
     def onLeave(self, leaver: str):
         self.log(f"{leaver} 离开")
         self.nicks.remove(leaver)
