@@ -711,6 +711,8 @@ class Awaya:
             elif command == "setu":
                 if setuRl.frisk("*", 1):
                     context.appText("rl乐，别涩涩了")
+                elif type_ == "whisper":
+                    context.appText("别私信乐")
                 elif not sysList[2]:
                     cid = getStr(6)
                     context.appText("少女祈祷中. . .", "part", cid=cid)
