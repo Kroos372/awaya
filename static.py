@@ -491,12 +491,11 @@ class Looker:
             return f"\n他于{timeDiff(joined)}前加入。\n发言频率：{freq}"
 ## 在线用户列表器
 class ListChat:
-    def __init__(self, chat, channel: str, customId: str, passwd: str=""):
+    def __init__(self, channel: str, customId: str, passwd: str=""):
         self.nick = f"_list{random.randint(1, 9999)}"
         self.customId = customId
         self.channel = channel
         self.passwd = passwd
-        self.chat = chat
 
         self.oled = False
     def _sendPacket(self, packet):
@@ -543,7 +542,7 @@ class ListChat:
         self.ws.close()
         passwd = pswd or self.passwd
         try:
-            ryo = ListChat(self.chat, self.channel, self.customId, passwd)
+            ryo = ListChat(self.channel, self.customId, passwd)
         except:
             pass
         else:
@@ -595,6 +594,52 @@ class Black:
     def _writeJson(self):
         userData[self.name] = self.data
         writeJson("userData.json", userData)
+## 房间状态
+class RoomChat:
+    def __init__(self, channel: str, customId: str, nick: str=""):
+        self.nick = nick
+        self.customId = customId
+        self.channel = channel
+
+        self.oled = False
+    def _sendPacket(self, packet):
+        encoded = json.dumps(packet)
+        try:
+            self.ws.send(encoded)
+        except websocket.WebSocketException:
+            pass
+    def rock(self) -> str:
+        self.ws = websocket.create_connection(
+            "wss://hack.chat/chat-ws"
+        )
+        self._sendPacket({"cmd": "join", "channel": self.channel, "nick": self.nick})
+        while True:
+            result = json.loads(self.ws.recv())
+            cmd = result["cmd"]
+
+            if cmd == "captcha":
+                return "Captcha"
+            elif cmd == "warn":
+                text = result["text"]
+                if text == "Nickname taken":
+                    return "正常"
+                elif re.match(r"^You are (?:be|join)ing", text):
+                    break # 开摆
+            elif cmd == "info" and text.startswith("You have been denied"):
+                return "锁房"
+            elif result.get("channel") and result.get("channel") != self.channel:
+                self.remake()
+            else:
+                break
+    # 重启
+    def remake(self):
+        self.ws.close()
+        try:
+            ryo = RoomChat(self.channel, self.customId, self.nick)
+        except:
+            pass
+        else:
+            ryo.rock()
 
 ## hash器
 class Hasher:
@@ -652,7 +697,7 @@ MENUMIN = "\n".join([
     "白名单用户：",
     f">前缀=={WHTFIX}==:",
     "addb, delb, igno, unig, bans, uban, kill, unwe, encap, decap, lock, unlock, gnkey, " + 
-    "setrl, addw, delw, list",
+    "setrl, addw, delw, list, room",
     "",
     f"发送=={PREFIX}help 命令==可获得该指令详细用法，如=={PREFIX}help help==",
     f"白名单用{WHTFIX}help",
@@ -983,6 +1028,15 @@ WTCOMMANDS = {
         "|参数: <频道>|",
         "|描述: 列出某频道的用户。|",
         f"|例: {WHTFIX}list your-channel|",
+        "|注: 别用太多，容易rl|"
+    ]),
+    "room": "\n".join([
+        "# ROOM State:",
+        "||",
+        "|:-:|",
+        "|参数: ?<频道>|",
+        "|描述: 检查频道状态（锁房/验证码）|",
+        f"|例: {WHTFIX}room your-channel|",
         "|注: 别用太多，容易rl|"
     ]),
     "rcolor": "\n".join([

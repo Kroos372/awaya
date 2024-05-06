@@ -414,7 +414,7 @@ class Awaya:
                     context.appText("好好好，删除成功。")
             elif command == "list":
                 lChannel = msg[6:]
-                if not msg[6:]:
+                if not lChannel:
                     context.appText("-_-#")
                 elif lChannel == self.channel:
                     context.appText(self.listNow())
@@ -424,8 +424,14 @@ class Awaya:
                     # List? kita kita~
                     cid = getStr(6)
                     context.appText("桥豆麻袋", "part", cid=cid)
-                    kita = ListChat(self, msg[6:], cid, self.passwd)
+                    kita = ListChat(lChannel, cid, self.passwd)
                     self.updateFunc(kita.rock, cid)
+            elif command == "room":
+                lChannel = msg[6:] or self.channel
+                cid = getStr(6)
+                context.appText("桥豆麻袋", "part", cid=cid)
+                kita = RoomChat(lChannel, cid, self.nick)
+                self.updateFunc(kita.rock, cid)
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
@@ -703,7 +709,7 @@ class Awaya:
                 if cmd in cmdList:
                     context.appText(cmdList[cmd]())
                 elif cmd == "afks":
-                    context.appText(afker.list())
+                    context.appText(self.afker.list())
                 elif cmd == self.channel:
                     context.appText(self.listNow())
                 else:
