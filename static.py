@@ -343,7 +343,7 @@ class Users:
         zhuyue = []
         for nick, maggie in self.data.items():
             if maggie[attr] == value:
-                zhuyue.append(nick) 
+                zhuyue.append(nick)
         return zhuyue
     def changeAttr(self, nick, attr, value):
         self.data[nick][attr] = value

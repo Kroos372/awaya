@@ -247,7 +247,10 @@ class Awaya:
             # 私信rl更严
             context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part")
 
-        command = msg.split()[0]
+        try:
+            command = msg.split()[0]
+        except:
+            command = "" # 服了
         if msg[0] == WHTFIX and trip in whiteList:
             command = command[1:]
             if command == "help":
@@ -322,7 +325,7 @@ class Awaya:
                 attr = namePure(bloods[2])
                 nicks = self.users.attrsGet(bloods[1], attr)
                 if nicks:
-                    assert_ = self.kick(nicks, True)
+                    assert_ = self.kick(*nicks, assert_=True)
                     if assert_:
                         context.appText(banned.add(bloods[1], attr))
                         context.appText(assert_, "part")
