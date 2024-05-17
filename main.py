@@ -11,6 +11,7 @@ class Awaya:
         self.color = color
 
         self.funclist = [self.selfSelf, self.premade, self.afks, self.mainfunc]
+        self.blacktemp = []
         self.peeper = Peeper()
         self.afker = Afker()
         self.users = Users()
@@ -189,12 +190,14 @@ class Awaya:
     # 发言与封禁词rl
     def rl(self, sender: str, msg: str, score: int=0) -> str:
         hash_ = self.users.getAttr(sender, "hash")
-        if msgRl.frisk(hash_, 1+len(msg)/256 + score):
+        if msgRl.frisk(hash_, 1+len(msg)/512 + score):
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
+            self.blacktemp.append(sender)
             return self.kick(sender)
         for word in banWords:
             if re.search(word, msg) and wordRl.frisk(hash_, 1):
                 wordRl.records[hash_]["score"] = wordRl.threshold / 2
+                self.blacktemp.append(sender)
                 return self.kick(sender)
         return ""
     # 踢
@@ -236,7 +239,7 @@ class Awaya:
         user = self.users.getUser(sender)
         if type_ != "whisper":
             # rl
-            context.appText(self.rl(sender, msg), "part")
+            context.appText(self.rl(sender, msg), "part", force=True)
             # 加peep
             if not ignore.check(**user):
                 self.peeper.push(sender, msg, kwargs.get("customId"), kwargs.get("userid"))
@@ -245,8 +248,7 @@ class Awaya:
                 sysList[9].append(msg)
         elif trip not in whiteList:
             # 私信rl更严
-            context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part")
-
+            context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part", force=True)
         try:
             command = msg.split()[0]
         except:
@@ -572,7 +574,7 @@ class Awaya:
                 except BaseException as e:
                     context.appText("错误！\n```\n" + traceback.format_exc(chain=False) + "\n```")
         # 检查黑名单
-        if black.check(**user):
+        if black.check(**user) or sender in self.blacktemp:
             context.returns = True
         # 检查留言
         context.appText(left.check(**user), "whisper")
@@ -585,7 +587,10 @@ class Awaya:
             if "@" in msg:
                 context.appText(self.afker.alert(msg))
     def mainfunc(self, context, msg, sender, trip, type_, **kwargs):
-        command = msg.split()[0]
+        try:
+            command = msg.split()[0]
+        except:
+            command = ""
         icb9 = random.randint(1, 134)
 
         if msg[0] == PREFIX:
@@ -836,6 +841,8 @@ class Awaya:
         self.nicks.remove(leaver)
         self.users.delUser(leaver)
         self.looker.delUser(leaver)
+        if leaver in self.blacktemp:
+            self.blacktemp.remove(leaver)
     def onSet(self, result: dict):
         """{'cmd': 'onlineSet', 'nicks': list, 'users': 
             [{'channel': str, 'isme': bool,  'nick': str,  'trip': str, 
@@ -888,7 +895,7 @@ class Awaya:
         trip = self.users.getAttr(sender, "trip")
         self.peeper.push("*", msg)
         self.log(f"\\*：{msg[:256]}")
-        self.sendMsg(self.rl(sender, msg, 0.2))
+        self.sendMsg(self.rl(sender, msg, 0.2), force=True)
         sawer.add(sender, trip, msg)
         self.looker.addUser(sender)
         self.whisper(sender, left.check(**self.users.getUser(sender)))
@@ -912,7 +919,7 @@ class Awaya:
             sender = data["nick"]
             sawer.add(sender, self.users.getAttr(sender, "trip"), data["text"])
             self.looker.add(sender)
-            self.sendMsg(self.rl(sender, text, 1))
+            self.sendMsg(self.rl(sender, text, 1), force=True)
     def onMsg(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         context = Context(sender, type_)
         for func in self.funclist:
