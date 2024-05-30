@@ -354,8 +354,10 @@ class Awaya:
                 else:
                     ans = " ".join(_000[2:])
                     quest = textPure(_000[1])
-                    if quest not in answer: answer[quest] = [ans]
-                    else: answer[quest].append(ans)
+                    if quest not in answer:
+                        answer[quest] = [ans]
+                    else:
+                        answer[quest].append(ans)
                     context.appText(f"添加成功(☆▽☆)")
                     writeJson("answer.json", answer)
             elif command == "kill":
@@ -581,9 +583,9 @@ class Awaya:
     # 古兰枝掌管afk的神
     def afks(self, context, msg, sender, trip, type_, **kwargs):
         if type_ != "whisper":
-            context.appText(self.afker.check(sender, trip))
+            context.appText(self.afker.check(sender))
             if re.match(r"^afk\b", msg):
-                context.appText(self.afker.add(sender, trip, msg[4:44] or "AFK"))
+                context.appText(self.afker.add(sender, msg[4:44] or "AFK"))
             if "@" in msg:
                 context.appText(self.afker.alert(msg))
     def mainfunc(self, context, msg, sender, trip, type_, **kwargs):
@@ -841,6 +843,7 @@ class Awaya:
         self.nicks.remove(leaver)
         self.users.delUser(leaver)
         self.looker.delUser(leaver)
+        self.afker.check(leaver)
         if leaver in self.blacktemp:
             self.blacktemp.remove(leaver)
     def onSet(self, result: dict):

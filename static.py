@@ -137,12 +137,12 @@ def timeDiff(seconds) -> str:
     elif seconds >= 60:
         diff = f"{seconds // 60}分"
         return diff + timeDiff(seconds % 60)
-    else:
+    elif seconds:
         return f"{seconds}秒"
 ## 格式化时间
-def ftime(seconds, format="%Y-%m-%d %H:%M:%S") -> str:
+def ftime(seconds, format_="%Y-%m-%d %H:%M:%S") -> str:
     struct = gmNow(seconds)
-    magnolia = time.strftime(format, struct)
+    magnolia = time.strftime(format_, struct)
     return magnolia
 ## 检验字符串规范
 def verify(type_, text):
@@ -350,46 +350,30 @@ class Users:
 ## 挂机器
 class Afker:
     def __init__(self):
-        # 别问为什么不写一块
-        self.tfk = {} # Trip aFK
-        self.nfk = {} # Nick aFK
-    def check(self, nick, trip) -> str:
+        self.afk = {}
+    def check(self, nick) -> str:
         try:
-            if trip:
-                doing = self.tfk.pop(trip)
-                return f"{nick}#{trip} {doing[0]} 了 {timeDiff(now() - doing[1])}, 欢迎回来(\\*￣ω￣)"
-            else:
-                doing = self.nfk.pop(nick)
-                return f"{nick} {doing[0]} 了 {timeDiff(now() - doing[1])}, 欢迎回来(\\*￣ω￣)"
+            doing = self.afk.pop(nick)
+            return f"{nick} {doing[0]} 了 {timeDiff(now() - doing[1])}, 欢迎回来(\\*￣ω￣)"
         except KeyError:
             return ""
-    def add(self, nick, trip, doing) -> str:
-        if trip:
-            self.tfk[trip] = [doing, now(), nick]
-            return f"{nick}#{trip} 正在{doing}, 加油ヾ(◍°∇°◍)ﾉﾞ"
-        else:
-            self.nfk[nick] = [doing, now()]
-            return f"{nick} 正在{doing}, 加油ヾ(◍°∇°◍)ﾉﾞ"
+    def add(self, nick, doing) -> str:
+        self.afk[nick] = [doing, now()]
+        return f"{nick} 正在{doing}, 加油ヾ(◍°∇°◍)ﾉﾞ"
     def alert(self, msg) -> str:
         huwu = []
-        for trip, dpg in self.tfk.items():
-            if re.search(rf"@{dpg[2]}\b", msg):
-                huwu.append(f"{dpg[2]}#{trip} {timeDiff(now() - dpg[1])}前开始 正在{dpg[0]}, 请不要打扰ta――")
-        for nick, dpg in self.nfk.items():
+        for nick, dpg in self.afk.items():
             if re.search(rf"@{nick}\b", msg):
                 huwu.append(f"{nick} {timeDiff(now() - dpg[1])}前开始 正在{dpg[0]}, 请不要打扰ta――")
         return "\n".join(huwu)
     def list(self) -> str:
         xuan2wei1 = []
-        for trip, dpg in self.tfk.items():
-            xuan2wei1.append(f"{dpg[2]}#{trip} 正在 {dpg[0]} (从{timeDiff(now() - dpg[1])}前开始)")
-        for nick, dpg in self.nfk.items():
+        for nick, dpg in self.afk.items():
             xuan2wei1.append(f"{nick} 正在 {dpg[0]} (从{timeDiff(now() - dpg[1])}前开始)")
         xuan2wei1 = "\n".join(xuan2wei1)
         return "### 正在挂机的……\n" + xuan2wei1 if xuan2wei1 else "大家都在哦~"
     def clear(self):
-        self.tfk.clear()
-        self.nfk.clear()
+        self.afk.clear()
 ## 留言器
 class Lefter:
     def __init__(self, msg: dict):
@@ -531,10 +515,12 @@ class ListChat:
                     if user["isme"]:
                         continue
                     if user["trip"]:
-                        trip = ", " + user["trip"]
+                        trip = user["trip"]
+                        if user["uType"] == "mod":
+                            trip += "⭐"
                     else:
                         trip = ""
-                    starry += f"=={user['nick']}=={trip}, {user['hash']}\n"
+                    starry += f"=={user['nick']}==, {trip}, {user['hash']}\n"
                 self.ws.close()
                 return starry or "空空如也~"
     # 重启
@@ -825,7 +811,7 @@ COMMANDS = {
         "# LIST Sth.:",
         "||",
         "|:-:|",
-        "|参数: wht/blk/ign/ban/afk/word|",
+        "|参数: wht/blk/ign/ban/afks/word|",
         "|描述: 列出一些名单|",
         f"|例: {PREFIX}list wht|",
         "|注: 你感到神秘的力量在涌动|"
