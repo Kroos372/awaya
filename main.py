@@ -192,12 +192,10 @@ class Awaya:
         hash_ = self.users.getAttr(sender, "hash")
         if msgRl.frisk(hash_, 1+len(msg)/512 + score):
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
-            self.blacktemp.append(sender)
             return self.kick(sender)
         for word in banWords:
             if re.search(word, msg) and wordRl.frisk(hash_, 1):
                 wordRl.records[hash_]["score"] = wordRl.threshold / 2
-                self.blacktemp.append(sender)
                 return self.kick(sender)
         return ""
     # 踢
@@ -210,6 +208,7 @@ class Awaya:
                 else:
                     continue
             else:
+                self.blacktemp.append(nick)
                 kkNicks.append(nick)
         if kkNicks:
             return KICK + " " + " ".join(kkNicks)
