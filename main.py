@@ -1,6 +1,10 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
+from games.chess import CCreply
+from games.poker import pkReply
+from games.uno import unoReply
+from games.truth import *
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -78,13 +82,14 @@ class Awaya:
             bo_od = gmNow()
             hour = (bo_od.tm_hour + 1) % 24
             time.sleep(3600 - bo_od.tm_min*60 - bo_od.tm_sec)
-            if hour == 0:
-                sysList[3] = nowDay()
             if sysList[1]:
                 try:
                     self.sendMsg(CLOCKS[hour])
                 except:
                     pass
+            if hour == 0:
+                sysList[3] = nowDay()
+                # MotdChat(self.channel, MOD).rock()
     def sendMsg(self, text: str, cid: str="", force: bool=False):
         if cid:
             self._sendPacket({"cmd": "chat", "text": text, "customId": cid}, force)
@@ -200,6 +205,7 @@ class Awaya:
         return ""
     # 踢
     def kick(self, *nicks, assert_: bool=False):
+        return
         kkNicks = []
         for nick in nicks:
             if nick == self.nick or self.users.getAttr(nick, "trip") in whiteList:
@@ -574,6 +580,10 @@ class Awaya:
                         exec(msg[6:])
                 except BaseException as e:
                     context.appText("错误！\n```\n" + traceback.format_exc(chain=False) + "\n```")
+            # elif command == "motd":
+            #     userData["motd"] = msg[6:]
+            #     writeJson("userData.json", userData)
+            #     MotdChat(self.channel, MOD).rock()
         # 检查黑名单
         if black.check(**user) or sender in self.blacktemp:
             context.returns = True
@@ -732,6 +742,7 @@ class Awaya:
                     cid = getStr(6)
                     context.appText("少女祈祷中. . .", "part", cid=cid)
                     self.updateFunc(colorPic, cid, msg[6:])
+
         elif namePure(msg) == self.nick:
             if icb9 > 130:
                 context.appText(random.choice(replys[1]).replace("sender", sender))
@@ -747,21 +758,12 @@ class Awaya:
                 context.appText(reply(sender, msg))
             else:
                 context.appText(reply(sender, msg, False))
+        elif msg == "菜单":
+            context.appText(f"{MENUMIN}", "whisper")
+
         elif msg[0] == "r" and type_ != "whisper":
             if msg == "r":
-                ranNum = random.randint(1, 1000)
-                if truthList[0]:
-                    hashCode = self.users.getAttr(sender, "hash")
-                    if sender in truthList[1]:
-                        context.appText(f"{sender}已经摇出{truthList[1][sender]}了(ﾉ\"◑ڡ◑)ﾉ")
-                    elif hashCode in truthList[2]:
-                        context.appText(f"{sender}，不要想开小号哦(￢з￢)σ ")
-                    else:
-                        truthList[1][sender] = ranNum
-                        truthList[2].append(hashCode)
-                        context.appText(str(ranNum))
-                else:
-                    context.appText(str(ranNum))
+                context.appText(truthDo(sender, self.users.getAttr(sender, "hash")))
             elif msg[:2] == "r ":
                 sakura = msg.split()[1:]
                 try:
@@ -781,8 +783,15 @@ class Awaya:
                 digit = msg[7:25]
                 try: context.appText(rollTo1(int(digit)))
                 except ValueError as e: context.appText(rollTo1(1000))
-        elif msg == "菜单":
-            context.appText(f"{MENUMIN}", "whisper")
+        elif msg.startswith("cc ") and type_ != "whisper":
+            context.appText(CCreply(sender, msg[3:]))
+        elif msg.startswith("p ") and type_ != "whisper":
+            pkReply(context, sender, msg[2:].replace("。", "."))
+        elif msg.startswith("t ") and type_ != "whisper":
+            context.appText(truthReply(msg[2:]))
+        elif msg.startswith("u ") and type_ != "whisper":
+            context.appText(unoReply(msg[2:]))
+
         # 古老的梗
         elif namePure(msg) == sender:
             context.appText("why did you call yourself")
@@ -842,7 +851,7 @@ class Awaya:
         self.nicks.remove(leaver)
         self.users.delUser(leaver)
         self.looker.delUser(leaver)
-        self.afker.check(leaver)
+        # self.afker.check(leaver)
         if leaver in self.blacktemp:
             self.blacktemp.remove(leaver)
     def onSet(self, result: dict):

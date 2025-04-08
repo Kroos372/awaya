@@ -21,32 +21,6 @@ def gmNow(sec=0):
 def writeJson(filename, datas):
     with open("files/" + filename, "w", encoding="utf8") as f:
         json.dump(datas, fp=f, ensure_ascii=False, indent=2)
-## 开始真心话
-def truth()->str:
-    if truthList[0]:
-        return "已经在玩了哦╮(╯_╰)╭"
-    else: 
-        truthList[0] = True
-        return f"发r, 发结算, 发结束游戏, 别发@{NAME} 提问"
-## 结算真心话
-def atLast()->str:
-    if not truthList[0]:
-        return "真心话还没开始你在结算什么啊(▼皿▼#)"
-    elif len(truthList[2]) < 2:
-        return "人数不够"
-    else:
-        sort = sorted(truthList[1].items(), key=lambda x: x[1])
-        loser, winner = sort[0], sort[-1]
-        fin = f"人数：{len(truthList[1])}。\n最大：{winner[1]}（{winner[0]}），最小：{loser[1]}（{loser[0]}）。"
-        truthList[1] = {}
-        truthList[2] = []
-        return fin
-## 结束真心话
-def endTruth()->str:
-    if truthList[0]:
-        truthList[0] = False
-        return "好吧好吧，结束咯(一。一;;）"
-    return "真心话还没开始你在结束什么啊(▼皿▼#)"
 ## 那个啥，反正就是那个
 def getTime() -> str:
     tcg = gmNow()
@@ -102,11 +76,12 @@ def reply(sender: str, msg: str, api: bool=True) -> str:
         return None # 乖巧
 ## 长消息上传
 def toWeb(text):
-    try:
-        requests.post(URL, data={"token": TOKEN, "text": text}, timeout=10)
-        return URL
-    except:
-        return text[:512]
+    # try:
+    #     requests.post(URL, data={"token": TOKEN, "text": text}, timeout=10)
+    #     return URL
+    # except:
+    #     return text[:512]
+    return text[:512] + "\n...太长了。"
 ## 随机字符串
 def getStr(length=16) -> str:
     dinnerbone = ""
@@ -184,6 +159,28 @@ def colorPic(args: str=""):
 def nowDay() -> str:
     now = time.gmtime(time.time() + 28800)
     return f"{now.tm_year}{now.tm_mon:0>2}{now.tm_mday:0>2}"
+## Message Of The Day
+# def getMotd() -> str:
+#     now = time.gmtime(time.time() + 28800)
+#     year, month, day = now.tm_year, now.tm_mon, now.tm_mday
+#     dayday = f"{year}-{month}-{day}"
+#     try:
+#         resInfo = requests.get("https://timor.tech/api/holiday/info/" + dayday, headers=HEADERS, timeout=10).json()
+#         resNext = requests.get(f"https://timor.tech/api/holiday/next/{dayday}?week=Y", headers=HEADERS, timeout=10).json()
+#         if resInfo["code"] != 0 or resNext["code"] != 0:
+#             raise BaseException
+#     except:
+#         return "出错啦，请稍后再试(◐_◑)"
+#     week = WEEKS[resInfo["type"]["week"]]
+#     text = f"今天是**{year}**年 **{month}**月**{day}**日 **{week}**"
+#     holiday = resInfo["holiday"]
+#     if holiday:
+#         text += f"\n休息日，放松一下吧~"
+#     else:
+#         holiday = resNext["holiday"]
+#         text += f"\n距离下个休息日 **{holiday['name']}** 还有 **{holiday['rest']}** 天"
+
+#     return userData["motd"] + "\n&ensp;\n---\n" + text
 
 # 玩类玩的
 ## 仿rate-limiter
@@ -626,6 +623,36 @@ class RoomChat:
             pass
         else:
             ryo.rock()
+## 更新motd
+# class MotdChat:
+#     def __init__(self, channel: str, trip: str):
+#         self.nick = f"motd_{random.randint(1, 9999)}"
+#         self.trip = trip
+#         self.channel = channel
+
+#         self.oled = False
+#     def _sendPacket(self, packet):
+#         encoded = json.dumps(packet)
+#         try:
+#             self.ws.send(encoded)
+#         except websocket.WebSocketException:
+#             pass
+#     def rock(self) -> str:
+#         self.ws = websocket.create_connection(
+#             "wss://hack.chat/chat-ws"
+#         )
+#         self._sendPacket({"cmd": "join", "channel": self.channel, "nick": self.nick + "#" + self.trip})
+#         self._sendPacket({"cmd": "setmotd", "motd": getMotd()})
+#         self.ws.close()
+#     # 重启
+#     def remake(self):
+#         self.ws.close()
+#         try:
+#             ryo = RoomChat(self.channel, self.customId, self.nick)
+#         except:
+#             pass
+#         else:
+#             ryo.rock()
 
 ## hash器
 class Hasher:
@@ -666,8 +693,8 @@ with open("files/reply.json", encoding="utf8") as f:
 with open("files/answer.json", encoding="utf8") as f:
     answer = json.loads(dec(f.read()))
 # 常量
-PREFIX, WHTFIX, OWNFIX = ";", "0", "."
-KICK, AUTH, EHHH = "/w mbot kick", info["auth"], "&zwj;"
+PREFIX, WHTFIX, OWNFIX, EHHH = ";", "0", ".", "&zwj;"
+KICK, AUTH, MOD = "/w mbot kick", info["auth"], info["mod"]
 URL, TOKEN = "http://play.simpfun.cn:17254/awaya/", info["token"]
 LATEXOOM = r"$\begin{pmatrix}qaq\\[20231128em]\end{pmatrix}$"
 NAME, OWNER = info["name"], info["owner"]
@@ -678,7 +705,7 @@ MENUMIN = "\n".join([
     f">前缀=={PREFIX}==:",
     "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu",
     "无前缀:",
-    "r, rollen, time, 真心话",
+    "r, rollen, time, 游戏",
     "",
     "白名单用户：",
     f">前缀=={WHTFIX}==:",
@@ -852,12 +879,12 @@ COMMANDS = {
         "|例: time|",
         "|注: [来自点我](https://literature-clock.jenevoldsen.com/)|",
     ]),
-    "真心话": "\n".join([
-        "# Truth or Dare:",
+    "游戏": "\n".join([
+        "# Games:",
         "||",
         "|:-:|",
-        "|锟斤拷: 烫烫烫烫烫烫烫烫|"
-    ]),
+        "|瓦: 一些小游戏|",
+    ])
 }
 WTCOMMANDS = {
     "addb": "\n".join([
@@ -1045,6 +1072,8 @@ WTCOMMANDS = {
         "|注: 详见gnkey|"
     ])
 }
+HEADERS = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"}
+WEEKS = [None, "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
 CLOCKS = [
     "0点了，夜深快准备睡觉吧~",
     "都已经1点，还不睡觉吗？",
@@ -1079,9 +1108,7 @@ KAWAII = [
 
 # 全局变量
 ## [0涩图开关, 1报时开关, 2休眠开关, 3当前日期, 4sender nick, 5报错是否重启, 6心跳频率(秒), 7stfu时间, 8玩的, 9复读库]
-sysList = [False, True, False, nowDay(), "", True, 120, 0, False, []]
-## [0真心话开关, 1{昵称：摇出的数字}, 2[玩游戏中的hash]]
-truthList = [False, {}, []]
+sysList = [False, True, False, nowDay(), "", False, 120, 0, False, []]
 
 banWords = userData["banWords"]
 whiteList = userData["whiteList"]
@@ -1105,11 +1132,12 @@ lineReply = {
     # 纪念零姬……
     "0.0": ["0.0.0", ".0.", ";0;"],
     "menu": ["菜单", "别发菜单"],
+    "游戏": ["\n".join([
+        "象棋(cc), 扑克(p), 真心话(t), uno(u)",
+        "发送`<前缀> help`获取对应帮助"
+    ])],
 
-    "time": getTime,
-    "真心话": truth,
-    "结算": atLast,
-    "结束游戏": endTruth,
+    "time": getTime
 }
 cmdList = {
     "wht": lambda: f"当前白名单识别码：{', '.join(whiteList)}\n当前粉名单识别码：" + ", ".join(OWNER),
