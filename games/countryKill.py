@@ -372,7 +372,6 @@ class Cards:
     def appTrash(self, card):
         self.trash.append(card)
         return card
-cardList = Cards()
 # 牌类
 class Card:
     def __init__(self, name, suit, **kargs):
@@ -462,6 +461,8 @@ def initCards() -> list:
     cards += createCards("仁王盾", clubs=2, type="armor")
     random.shuffle(cards)
     return cards
+cardList = Cards()
+
 # 是否存在这个玩家（真有必要写函数吗）
 def verifyPlayer(player) -> bool:
     return namePure(player) in countryKill[1]
