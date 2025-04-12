@@ -318,7 +318,7 @@ class Player:
         return text + targetObj.hurt(damage)
 
     # 摸牌
-    def draw(self, num: int, judge: bool=False) -> "Card" | str:
+    def draw(self, num: int, judge: bool=False):
         for _ in range(num):
             card = cardList.pop()
             self.cards.append()
