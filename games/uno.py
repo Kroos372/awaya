@@ -138,7 +138,7 @@ def unoReply(context, sender, msg):
             nextid_ = (id_ + 1) % len(unoList[1])
             addCard = random.choice(unoList[3])
             unoList[3].remove(addCard)
-            if card[0] == unoList[5][0] or card[1:] == unoList[5][1:]:
+            if addCard[0] == unoList[5][0] or addCard[1:] == unoList[5][1:]:
                 if addCard[1:] == "禁":
                     ban(id_)
                     context.appText(f"{sender}补到了=={addCard}==并将其打出，{unoList[1][nextid_]}跳过1轮，轮到@{unoList[4]} ！")
