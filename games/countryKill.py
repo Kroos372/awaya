@@ -197,7 +197,7 @@ HELP = "\n".join([
 RULE = "\n".join([
     "行牌规则：",
     "s <牌的序号> <参数>, 如==s 1 @Krs_==, ==s 4 Krs_ awa_ya==。以下是注意事项：",
-    "出掉一张牌后，后面的牌序号将自动-1"，
+    "出掉一张牌后，后面的牌序号将自动-1",
     "顺手牵羊，过河拆桥等牌的第二个参数可指定装备牌名称或手牌序号",
     "重铸铁锁连环发送==s <序号> 重铸==",
     "不出牌或无法出牌发送=s .==, 进行选择发送==s <序号>==",
@@ -510,7 +510,7 @@ def play(context, sender, msg):
                 if command != ".":
                     cardObj = senderObj.cards[int(command)-1]
                     cardName = cardObj.name
-            except TypeError, IndexError:
+            except (TypeError, IndexError):
                 return context.appText("指令错误！")
             player = nowTurn["player"]
             playerObj = countryKill[2][player]

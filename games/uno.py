@@ -95,7 +95,7 @@ def turn(id_) -> int:
     unoList[1].reverse()
     unoList[2].reverse()
     newNextId = len(unoList[1]) - id_
-    unoList[4] = unoList[1][newNextId]
+    unoList[4] = unoList[1][newNextId % len(unoList[1])]
     return newNextId - 1
 
 def formatCards(id_) -> str:
