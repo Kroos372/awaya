@@ -1,7 +1,7 @@
 import random, re
 
 # [0扑克开关, 1{在玩的人:[拥有的牌]}, 2轮到序号, 3当前牌堆, 4底牌, 5地主, 6是否在叫牌阶段, 7[玩家名称], 8叫了几分, 9本轮第一出牌的序号, 10上家的牌]
-pokers = [False, {}, 0, [], [], None, False, [], None, 0, None, None]
+pokers = [False, {}, 0, [], [], None, False, [], 0, None, None]
 CARDS = ["3", "4", "5", "6", "7", "8", "9", "H", "J", "Q", "K", "A", "2"]
 JOKERS = ["小", "大"]
 SORT = dict(zip(CARDS+JOKERS, range(15)))
@@ -58,7 +58,7 @@ def pkReply(context, sender: str, msg: str):
     if msg == "规则":
         context.appText(POKERRULE)
     elif msg == "help":
-        self.sendMsg(POKERMENU)
+        context.appText(POKERMENU)
     elif pokers[0] and sender == pokers[7][pokers[2]]:
         # 叫牌阶段
         if pokers[6]:

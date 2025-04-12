@@ -4,6 +4,7 @@ from static import *
 from games.chess import CCreply
 from games.poker import pkReply
 from games.uno import unoReply
+from games.bomber import bombReply, bombs
 from games.truth import *
 
 # OOP, 但不完全OOP
@@ -153,12 +154,14 @@ class Awaya:
             sys.exit()
         # 否则报错
         except BaseException as e:
-            filename = e.__class__.__name__ + ftime(now(), "%Y_%m_%d_%H_%M_%S")
             error = traceback.format_exc(chain=False)
-            with open(f"traceback/{filename}.txt", "w", encoding="utf8") as f:
-                f.write(error)
-            self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}\n```", True)
-            if sysList[5]:
+            if not sysList[5]:
+                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{error}\n```", True)
+            else:
+                filename = e.__class__.__name__ + ftime(now(), "%Y_%m_%d_%H_%M_%S")
+                with open(f"traceback/{filename}.txt", "w", encoding="utf8") as f:
+                    f.write(error)
+                self.sendMsg(f"被玩坏了，呜呜呜……即将重启，请查看报错文件……", True)
                 time.sleep(6)
                 self._reconnect()
         self.rock()
@@ -444,10 +447,21 @@ class Awaya:
                 context.appText("桥豆麻袋", "part", cid=cid)
                 kita = RoomChat(lChannel, cid, self.nick)
                 self.updateFunc(kita.rock, cid)
+            elif command == "setb":
+                sp = msg.split()
+                try:
+                    mini, maxi = int(sp[1]), int(sp[2])
+                except:
+                    return context.appText("输入格式有误，请在0setb 后面用空格隔开，输入最小值和最大值两个整数！")
+                if (maxi-mini) < 1:
+                    context.appText("两数的差别过小，请重新设置！")
+                else:
+                    bombs[3], bombs[4] = mini, maxi
+                    context.appText("设置成功！")        
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
-                context.appText(f"{OWNMENU}", "whisper")
+                context.appText(OWNMENU, "whisper")
             elif command == "addw":
                 trip_ = msg[6:12]
                 if trip_ not in whiteList:
@@ -790,7 +804,9 @@ class Awaya:
         elif msg.startswith("t ") and type_ != "whisper":
             context.appText(truthReply(msg[2:]))
         elif msg.startswith("u ") and type_ != "whisper":
-            context.appText(unoReply(msg[2:]))
+            unoReply(context, sender, msg[2:].replace("。", "."))
+        elif msg.startswith("b ") and type_ != "whisper":
+            bombReply(context, sender, msg[2:])
 
         # 古老的梗
         elif namePure(msg) == sender:
@@ -933,6 +949,7 @@ class Awaya:
             self.sendMsg(self.rl(sender, text, 1), force=True)
     def onMsg(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         context = Context(sender, type_)
+        context.nick = self.nick
         for func in self.funclist:
             func(context, msg, sender, trip, type_, **kwargs)
             if context.remake:

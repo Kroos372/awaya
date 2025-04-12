@@ -19,6 +19,7 @@
 
 ### 别的
 特别感谢[DPG](https://github.com/Doppelganger-phi)与[Blaze](https://github.com/geGDVS)提供过的服务器支持。
+感谢Blaze的部分代码贡献，以及所有使用过阿瓦娅的大家。
 
 ## English ver.
 ### Introduction
@@ -37,3 +38,4 @@ Rewriten from [HackChat](https://github.com/gkbrk/hackchat)。
 
 ### Others
 Special thanks to [DPG](https://github.com/Doppelganger-phi) and [Blaze](https://github.com/geGDVS) for having provided server support.
+Thanks to Blaze for partly code contributions, and everyone who has used Awaya.

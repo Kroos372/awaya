@@ -4,9 +4,11 @@ import random
 def namePure(name: str) -> str:
     return name.strip("@").strip()
 
+# [0游戏开关, 1[玩家列表], 2{玩家: Player对象}]
+countryKill = [False, [], {}]
+
 POINTS = ["A"] + list(range(2, 11)) + list("JQK")
 BLACK, RED = ["黑桃", "梅花"], ["红桃", "方块"]
-playerList, playersDict = [], {}
 # [[处于“连环状态”的玩家]]
 chained = []
 # 当前轮次状态
@@ -17,12 +19,12 @@ nowTurn = {
     # cmd: str, # 操作，如杀、决斗、过河拆桥或装备牌技能
     # target: List[str], # 操作目标
     # temp: List[str], # 一些延时生效的效果参数，比如造成三尖两刃刀选择的多名目标
-    # period: str, # 阶段, 包括 judge: 判定阶段, play: 出牌阶段, discard: 弃牌阶段
     # wait: bool, # 是否等待响应（是否可以继续出牌）
 }
+
 # 都是牌上写的，有争议别找我
 def createDescription(text, author) -> str:
-    return "\n".join([f">“{text}”", f">——{author}\n\n"])
+    return "\n".join([f">“{text}”", f">——{author}", "", ""])
 DESCRIPTION = {
     # 锦囊
     "桃园结义": createDescription(
@@ -197,9 +199,9 @@ RULE = "\n".join([
     "s <牌的序号> <参数>, 如==s 1 @Krs_==, ==s 4 Krs_ awa_ya==。以下是注意事项：",
     "出掉一张牌后，后面的牌序号将自动-1"，
     "顺手牵羊，过河拆桥等牌的第二个参数可指定装备牌名称或手牌序号",
-    "重铸铁锁连环请直接发送==s <序号> 重铸==",
-    "弃牌阶段请发送==s 弃牌 <序号1> <序号2>==等",
+    "重铸铁锁连环发送==s <序号> 重铸==",
     "不出牌或无法出牌发送=s .==, 进行选择发送==s <序号>==",
+    "弃牌阶段发送==s . <序号1> <序号2>==等",
     "使用==s help <牌名>==查看卡牌的描述, ==s check==查看自己当前的牌, ==s all==查看所有人的牌",
     "注: 不能悔牌，出牌前请注意距离、防具等属性。"
 ])
@@ -214,7 +216,7 @@ class Player:
         self.equipments = [] # 装备牌
         self.delays = [] # 延时锦囊牌
     # 回血
-    def heal(self, point):
+    def heal(self, point: int):
         self.life = min(self.maxLife, self.life + point)
         text = f"{self.name}回复了{point}点体力，现在还有{self.life}点体力。\n"
         if self.life < 1:
@@ -222,7 +224,7 @@ class Player:
         else:
             return text
     # 扣血
-    def hurt(self, damage):
+    def hurt(self, damage: int):
         text = ""
         if damage > 1 and self.isEquipped("白银狮子"):
             damage = 1
@@ -238,36 +240,50 @@ class Player:
         nowTurn["wait"] = True
         nowTurn["cmd"] = "求桃"
         nowTurn["temp"] = [self.name]
-        index = playerList.index(self.name)
-        nowTurn["target"] = playerList[index:] + playerList[:index]
+        index = countryKill[1].index(self.name)
+        nowTurn["target"] = countryKill[1][index:] + countryKill[1][:index]
         return f"{self.name}剩余**{self.life}**点体力，进入濒死状态。发送`s 桃`救ta或者`s .`\n"
     # 是否拥有装备
-    def isEquipped(self, equipment) -> bool:
+    def isEquipped(self, equipment: str) -> bool:
         for i in self.equipments:
             if i.name == equipment:
                 return True
         return False
+    def equip(self, equipment: "Card") -> str:
+        text = f"{self.name}装备了【{equipment.readName}】\n"
+        for i, v in enumerate(self.equipments):
+            if v.type == equipment.type:
+                cardList.appTrash(self.equipments.pop(i))
+                text += f"{self.name}弃置了【{v.name}】\n"
+            if v.name == "白银狮子":
+                text += f"{self.name}失去了【白银狮子】，回复一点体力\n" + self.heal(1)
+        return text
+
     # 测量距离
-    def distanceTo(self, target) -> int:
-        index1 = playerList.index(self.name)
-        index2 = playerList.index(target)
+    def distanceTo(self, target: str) -> int:
+        index1 = countryKill[1].index(self.name)
+        index2 = countryKill[1].index(target)
         distance1 =  abs(index2 - index1)
-        distance2 = len(playerList) - distance1
+        distance2 = len(countryKill[1]) - distance1
         return min(distance1, distance2)
     # 是否能打到
-    def canHit(self, target) -> bool:
+    def canHit(self, target: str) -> bool:
         distance = self.distanceTo(target)
         for i in self.equipments:
             if i.type == "weapon": distance -= i.distance - 1
         return distance <= 1
 
     # 指定目标
-    def toKill(self, target, card):
-        if not self.canHit(target): return "距离不够！\n"
-        elif not verifyPlayer(target): return "没有这个玩家！\n"
-        targetObj = playersDict[target]
+    def toKill(self, target: str, card: "Card"):
+        if not self.canHit(target):
+            return "距离不够！\n"
+        try:
+            targetObj = countryKill[2][target]
+        except:
+            return "没有这个玩家！\n"
         text = ""
-        if self.isEquipped("青缸剑"): text += f"【青缸剑】：{self.name}无视了防具,\n"
+        if self.isEquipped("青缸剑"):
+            text += f"【青缸剑】：{self.name}无视了防具,\n"
         else:
             if self.isEquipped("雌雄双股剑") and self.gender != targetObj.gender:
                 weaponEff("雌雄双股剑", target)
@@ -290,8 +306,8 @@ class Player:
         nowTurn["target"] = [target]
         return text + f"@{target} 请使用【闪】"
     # 造成伤害
-    def kill(self, targets, card):
-        targetObj = playersDict[targets[0]]
+    def kill(self, targets: list, card: "Card"):
+        targetObj = countryKill[2][targets[0]]
         text, damage = "", 1
         if targetObj.isEquipped("藤甲") and card.name == "火杀":
             text += "【藤甲】使伤害增加了1点\n"
@@ -301,6 +317,17 @@ class Player:
             damage += 1
         return text + targetObj.hurt(damage)
 
+    # 摸牌
+    def draw(self, num: int, judge: bool=False) -> "Card" | str:
+        for _ in range(num):
+            card = cardList.pop()
+            self.cards.append()
+        self.cards.sort()
+        if judge:
+            return card
+        else:
+            return self.formatHand()
+
     # 格式化输出判定/装备牌
     def formatCards(self) -> str:
         text = "判定区: " + ", ".join([i.name for i in self.delays]) + "\n装备区: "
@@ -308,11 +335,11 @@ class Player:
         for i in self.equipments:
             iType = i.type
             if iType == "weapon":
-                result.append(f"武器: {iName}")
+                result.append(f"武器: {i.readName}")
             elif iType == "armor":
-                result.append(f"防具: {iName}")
+                result.append(f"防具: {i.name}")
             else:
-                result.append(f"坐骑: {iName}: {iType}")
+                result.append(f"坐骑: {i.readName}")
         return text + ", ".join(result)
     # 格式化为表格输出手牌
     def formatHand(self) -> str:
@@ -323,6 +350,12 @@ class Player:
             hands[2] += f"{v.suit}{v.point}|"
             hands[3] += v.name + "|"
         return "\n".join(hands)
+    # 格式化输出所有人的牌
+    def formatAll(self) -> str:
+        text = ""
+        for k, v in countryKill[1]:
+            text += f"#### {k}(与您距离为{self.distanceTo(k)})\n{v.formatCards()}\n手牌数量: {len(v.cards)}\n"
+        return text
 # 牌堆类
 class Cards:
     def __init__(self):
@@ -335,6 +368,10 @@ class Cards:
                 self.cards.append(self.trash.pop())
             random.shuffle(self.cards)
         return self.cards.pop()
+    # 加入弃置牌
+    def appTrash(self, card):
+        self.trash.append(card)
+        return card
 cardList = Cards()
 # 牌类
 class Card:
@@ -344,6 +381,17 @@ class Card:
         self.point = random.choice(POINTS)
         for k, v in kargs:
             self.__setattr__(k, v)
+    @property
+    def readName(self):
+        if self.type == "weapon":
+            return f"{self.name}(范围{self.distance})"
+        elif self.type[-1] == "1":
+            return f"{self.name}({self.type})"
+        else:
+            return self.name
+    def __getattr__(self, attr):
+        return None
+    
 def createCards(name, hearts=0, diamonds=0, spades=0, clubs=0, **kargs) -> list:
     cards = []
     for i in range(hearts):
@@ -369,21 +417,21 @@ def initCards() -> list:
     cards += createCards("闪", 12, 26)
     cards += createCards("酒", 1, 2, 2, 3)
     cards += createCards("桃", 14, 6)
-    cards += createCards("决斗", 1, 1, 1, 2)
-    cards += createCards("桃园结义", 2)
-    cards += createCards("乐不思蜀", 1, 1, 1, 2)
-    cards += createCards("铁索连环", spades=4, clubs=5)
-    cards += createCards("南蛮入侵", spades=3, clubs=2)
-    cards += createCards("火攻", 3, 2)
-    cards += createCards("无中生有", 6)
-    cards += createCards("无懈可击", 2, 2, 3, 3)
-    cards += createCards("兵粮寸断", spades=2, clubs=2)
-    cards += createCards("五谷丰登", 3)
-    cards += createCards("过河拆桥", 1, 2, 3, 3)
-    cards += createCards("顺手牵羊", 2, 3, 1, 2)
-    cards += createCards("万箭齐发", 2)
-    cards += createCards("闪电", 0, 1, 1, 1)
-    cards += createCards("借刀杀人", clubs=3)
+    cards += createCards("决斗", 1, 1, 1, 2, type="tip")
+    cards += createCards("桃园结义", 2, type="tip")
+    cards += createCards("乐不思蜀", 1, 1, 1, 2, type="tip")
+    cards += createCards("铁索连环", spades=4, clubs=5, type="tip")
+    cards += createCards("南蛮入侵", spades=3, clubs=2, type="tip")
+    cards += createCards("火攻", 3, 2, type="tip")
+    cards += createCards("无中生有", 6, type="tip")
+    cards += createCards("无懈可击", 2, 2, 3, 3, type="tip")
+    cards += createCards("兵粮寸断", spades=2, clubs=2, type="tip")
+    cards += createCards("五谷丰登", 3, type="tip")
+    cards += createCards("过河拆桥", 1, 2, 3, 3, type="tip")
+    cards += createCards("顺手牵羊", 2, 3, 1, 2, type="tip")
+    cards += createCards("万箭齐发", 2, type="tip")
+    cards += createCards("闪电", 0, 1, 1, 1, type="tip")
+    cards += createCards("借刀杀人", clubs=3, type="tip")
     # 装备牌
     cards += createCards("骅骝", diamonds=1, type="+1")
     cards += createCards("爪黄飞电", hearts=2, type="+1")
@@ -414,15 +462,9 @@ def initCards() -> list:
     cards += createCards("仁王盾", clubs=2, type="armor")
     random.shuffle(cards)
     return cards
-# 当前场上情况
-def allCards() -> str:
-    text = ""
-    for k, v in playersDict.items():
-        text += f"#### {k}\n{v.formatCards()}\n手牌数量: {len(v.cards)}\n"
-    return text
 # 是否存在这个玩家（真有必要写函数吗）
 def verifyPlayer(player) -> bool:
-    return namePure(player) in playerList
+    return namePure(player) in countryKill[1]
 # 武器发力了
 def weaponEff(name, *target):
     nowTurn["cmd"] = name
@@ -430,23 +472,22 @@ def weaponEff(name, *target):
     nowTurn["target"] = target
 # 发牌
 def deal(context):
-    for i in playerList:
+    for i in countryKill[1]:
         cards = []
         for j in range(4):
             cards.append(cardList.pop())
         cards.sort()
         gender = random.choice(["男", "女"]) # 幽默
-        playersDict[i] = Player(i, gender, 4, cards)
-        context.appText(f"您的性别是{gender}，以下是您的牌\n{', '.join(cards)}", "whisper", to=i)
+        countryKill[2][i] = Player(i, gender, 4, cards)
+        context.appText(f"您的性别是{gender}，以下是您的牌\n{countryKill[2][i].formatHand()}", "whisper", to=i)
 # 初始化当前轮次状态
 def initTurn():
-    index = playerList.index(nowTurn["player"])
-    nowTurn["player"] = playerList[(index + 1) % len(playerList)]
+    index = countryKill[1].index(nowTurn["player"])
+    nowTurn["player"] = countryKill[1][(index + 1) % len(countryKill[1])]
     nowTurn["dodged"] = False
     nowTurn["killed"] = False
     nowTurn["target"] = []
     nowTurn["temp"] = []
-    nowTurn["period"] = "judge"
     nowTurn["wait"] = False
 # 出牌
 def play(context, sender, msg):
@@ -455,7 +496,7 @@ def play(context, sender, msg):
         text = "没有参数！"
     else:
         command, text, legal = array[0], "", True
-        senderObj = playersDict[sender]
+        senderObj = countryKill[2][sender]
         if command == "check":
             return context.appText(f":\n{senderObj.formatCards()}\n手牌:\n{senderObj.formatHand()}", "whisper")
         elif command == "help":
@@ -463,16 +504,16 @@ def play(context, sender, msg):
             if card in USAGE: text = USAGE[card]
             else: text = "不存在这张牌！"
         elif command == "all":
-            text = allCards()
+            text = senderObj.formatAll()
         else:
             try:
-                if command not in [".", "弃牌", "重铸"]:
+                if command != ".":
                     cardObj = senderObj.cards[int(command)-1]
                     cardName = cardObj.name
             except TypeError, IndexError:
                 return context.appText("指令错误！")
             player = nowTurn["player"]
-            playerObj = playersDict[player]
+            playerObj = countryKill[2][player]
             # 被动出牌
             if nowTurn["wait"] and sender in nowTurn["target"]:
                 turnCmd = nowTurn["cmd"]
@@ -490,35 +531,79 @@ def play(context, sender, msg):
                         weaponEff("青龙偃月刀", player)
                         text += f"【青龙偃月刀】：【杀】被抵消，{player}可以选择再出一张【杀】"
                     else:
-                        text += f"{player}继续出牌"
+                        text += f"{player}继续出牌。\n"
             # 主动出牌
             elif not nowTurn["wait"] and sender == player:
-                # 跳过
+                # 跳过&弃牌
                 if command == ".":
-                    nowTurn["period"] = "discard"
-                    text += f"{sender}出牌完成\n"
-                # 弃牌
-                elif command == "弃牌" and nowTurn["period"] == "discard":
-                    pass
+                    length = len(senderObj.cards)
+                    for i in array[1:]:
+                        try:
+                            assert int(i) > length
+                        except:
+                            text += "序号错误！\n"
+                            break
+                    else:
+                        cards = []
+                        for i in array[1:]:
+                            card = cardList.appTrash(senderObj.cards.pop(int(i)))
+                            cards.append(card.name)
+                        text += f"{sender}弃置了{', '.join(cards)}\n"
+                        if len(senderObj.cards) > senderObj.life:
+                            text += f"您的手牌数大于体力值，请弃牌直到剩**{senderObj.life}**张!\n"
+                        else:
+                            context.appText(f"{sender}结束了自己的回合\n---\n")
+                            return goTurn(context, True)
                 else:
                     text += f"{sender}出了【{cardName}】\n"
-                    if command in DESCRIPTION:
-                        text += DESCRIPTION[command]
+                    if cardName in DESCRIPTION:
+                        text += DESCRIPTION[cardName]
 
                     if cardName[-1] == "杀":
-                        if len(array) < 2: context.appText("没有参数！")
+                        if len(array) < 2:
+                            text = "没有参数！"
+                        elif nowTurn["killed"]:
+                            text = "您这回合已经出过【杀】了！"
                         else:
-                            text = senderObj.toKill(array[1], card)
+                            text = senderObj.toKill(namePure(array[1]), card)
                             nowTurn["temp"] = array[2:]
                             if not nowTurn["dodged"]:
-                                nowTurn["cmd"] = command
+                                nowTurn["cmd"] = cardName
                             else:
                                 nowTurn["wait"] = True
-                            if not playerObj.isEquipped("诸葛连弩"):
+                            if not senderObj.isEquipped("诸葛连弩"):
                                 nowTurn["killed"] = True
+                    elif cardName in ["闪", "无懈可击"]:
+                        text = f"不能主动出【{cardName}】！\n"
+                    elif cardName == "桃":
+                        text = senderObj.heal(1)
+                    elif cardObj.type in ["weapon", "armor", "+1", "-1"]:
+                        senderObj.equip(cardObj)
 
     context.appText(text)
 
 # 转换轮次(判定&摸牌)
-def goTurn():
-    pass
+def goTurn(context, next: bool=False) -> str:
+    if next:
+        index = countryKill[1].index(nowTurn["player"])
+        index = (index + 1) % len(countryKill[1])
+        nowTurn["player"] = countryKill[1][index]
+        context.appText(f"轮到{nowTurn['player']}")
+    playerObj = countryKill[2][nowTurn["player"]]
+    context.appText(f"你摸了2张，这是你现在的牌\n{playerObj.draw(2)}", "whisper", to=playerObj.name)
+
+def killReply(context, sender, msg):
+    if countryKill[0] and sender in countryKill[1]:
+        play(context, sender, msg)
+    elif msg == "加入" and not countryKill[0]:
+        countryKill[1].append(sender)
+        context.appText("加入成功!")
+    elif msg == "开始":
+        if len(countryKill[1]) < 2:
+            context.appText("需要至少两个人！")
+        else:
+            countryKill[0] = True
+            deal(context)
+            nowTurn["player"] = random.choice(countryKill[1])
+            context.appText(f"牌发好了！随机由{nowTurn['player']}先开始！")
+            context.appText(goTurn(context))
