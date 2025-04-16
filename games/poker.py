@@ -26,7 +26,8 @@ POKERRULE = "\n".join([
     "剩余的就将这两种组合，不同组别用空格隔开即可，例如==p 4-5*3 7 9== ==p 7*4 99 HH==……",
     "玩得开心~"
 ])
-
+def allCards() -> str:
+    return "玩家牌数: " + ", ".join([f"{i}: {len(pokers[1][i])}" for i in pokers[7]])
 def landonwer(context, sender: str): 
     pokers[5] = sender
     pokers[6] = False
@@ -37,8 +38,8 @@ def landonwer(context, sender: str):
     cards = " ".join(pokers[1][sender])
     context.appText(f"{' '.join(pokers[4])}是底牌，{sender}是地主。\n游戏开始，地主@{sender} 先出，发送==p 规则==可以查看出牌规则哦；")
     context.appText(f"以下是您的牌：{cards}", "whisper")
-def passLand(context, sender: str):
-    pokers[2] = (pokers[2]+1)%3
+def passLand(context):
+    pokers[2] = (pokers[2]+1) % 3
     if pokers[2] == pokers[9]:
         landonwer(context, pokers[7][pokers[2]])
 # 飞机带的是否为同类
@@ -53,17 +54,21 @@ def sameLen(seq) -> bool:
 def endPoker():
     pokers[0], pokers[1], pokers[2] = False, {}, 0
     pokers[4], pokers[8], pokers[10] = [], 0, None
-def pkReply(context, sender: str, msg: str):
+    pokers[5] = None
+def main(context, sender: str, msg: str):
     msg = msg.upper()
     if msg == "规则":
         context.appText(POKERRULE)
-    elif msg == "help":
+    elif msg == "HELP":
         context.appText(POKERMENU)
+    elif msg == "结束" and sender in pokers[7]:
+        endPoker()
+        context.appText("唔，结束了;;;;")
     elif pokers[0] and sender == pokers[7][pokers[2]]:
         # 叫牌阶段
         if pokers[6]:
             if msg[0] == "0":
-                passLand(context, sender)
+                passLand(context)
                 if pokers[6]:
                     context.appText(f"{sender}不叫，轮到@{pokers[7][pokers[2]]} ")
             elif msg[0] in ["1", "2", "3"]:
@@ -76,8 +81,9 @@ def pkReply(context, sender: str, msg: str):
                     else:
                         pokers[8] = point
                         pokers[9] = pokers[2]
-                        passLand(context, sender)
-                        context.appText(f"{sender}叫出了{point}点，轮到@{pokers[7][pokers[2]]} ")
+                        passLand(context)
+                        if not pokers[5]:
+                            context.appText(f"{sender}叫出了{point}点，轮到@{pokers[7][pokers[2]]} ")
             else: 
                 context.appText("命令错误，请先叫分")
         # 出牌阶段
@@ -91,7 +97,7 @@ def pkReply(context, sender: str, msg: str):
                 else:
                     context.appText(f"{sender}跳过，轮到@{pokers[7][pokers[2]]} 。")
             elif msg == "CHECK":
-                context.appText(f"地主是{pokers[5]}, 上家出的牌是：{pokers[10]}\n以下是您的牌：{' '.join(pokers[1][sender])}", "whisper")
+                context.appText(f"地主是{pokers[5]}, 上家出的牌是：{pokers[10]}, {allCards()}\n以下是您的牌：{' '.join(pokers[1][sender])}", "whisper")
             else:
                 senderCards = pokers[1][sender]
                 # 本轮第一发
@@ -154,10 +160,12 @@ def pkReply(context, sender: str, msg: str):
                                     if senderCards.count(i) < 3: return context.appText("牌数不足;;;;")
                                     if i in array or i+i in array: return context.appText("别搞")
                                 for i in array:
-                                    if senderCards.count(i) < len(i): return context.appText("牌数不足;;;;")
+                                    if senderCards.count(i[0]) < len(i):
+                                        return context.appText("牌数不足;;;;")
                                 for i in CARDS[start:end+1]:
                                     for _ in range(3): senderCards.remove(i)
-                                for i in array: senderCards.remove(i)
+                                for i in "".join(array):
+                                    senderCards.remove(i)
                             else: return context.appText("不符合规则！")
                     # 炸弹
                     elif re.match(r"^[2-9AHJQK]\*4$", msg):
@@ -238,12 +246,13 @@ def pkReply(context, sender: str, msg: str):
                             if sameLen(array) and len(array) == (end-start+1):
                                 for i in CARDS[start:end+1]:
                                     if senderCards.count(i) < 3: return context.appText("牌数不足;;;;")
-                                    if i in array or i+i in array: return context.appText("别搞")
+                                    if i in array: return context.appText("别搞")
                                 for i in array:
-                                    if senderCards.count(i) < len(i): return context.appText("牌数不足;;;;")
+                                    if senderCards.count(i[0]) < len(i): return context.appText("牌数不足;;;;")
                                 for i in CARDS[start:end+1]:
                                     for _ in range(3): senderCards.remove(i)
-                                for i in "".join(array): senderCards.remove(i)
+                                for i in "".join(array):
+                                    senderCards.remove(i)
                             else: return context.appText("不符合规则！")
                     # 炸弹
                     elif re.match(r"^[2-9AHJQK]\*4$", msg) and last != "王炸":
@@ -264,8 +273,12 @@ def pkReply(context, sender: str, msg: str):
                 pokers[9] = pokers[2]
                 pokers[2] = (pokers[2]+1)%3
                 if not senderCards:
-                    if sender == pokers[5]: context.appText("地主获胜！")
-                    else: context.appText("农民获胜！")
+                    if sender == pokers[5]:
+                        winner = sender
+                    else:
+                        pokers[7].remove(pokers[5])
+                        winner = " @".join(pokers[7])
+                    context.appText(f"@{winner} 获胜！")
                     return endPoker()
                 else:
                     context.appText(f"{sender}出了{msg}，轮到@{pokers[7][pokers[2]]} 。")
@@ -308,6 +321,3 @@ def pkReply(context, sender: str, msg: str):
         if msg[-1] == "t":
             del pokers[1][sender]
             context.appText("已成功退出(‾◡◝)")
-    elif msg == "结束" and sender in pokers[7]:
-        endPoker()
-        context.appText("唔，结束了;;;;")

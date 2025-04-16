@@ -486,9 +486,7 @@ class ListChat:
         except websocket.WebSocketException:
             pass
     def rock(self) -> str:
-        self.ws = websocket.create_connection(
-            "wss://hack.chat/chat-ws"
-        )
+        self.ws = websocket.create_connection(WSADD)
         self._sendPacket({"cmd": "join", "channel": self.channel, "nick": f"{self.nick}#{self.passwd}"})
         while True:
             result = json.loads(self.ws.recv())
@@ -592,9 +590,7 @@ class RoomChat:
         except websocket.WebSocketException:
             pass
     def rock(self) -> str:
-        self.ws = websocket.create_connection(
-            "wss://hack.chat/chat-ws"
-        )
+        self.ws = websocket.create_connection(WSADD)
         self._sendPacket({"cmd": "join", "channel": self.channel, "nick": self.nick})
         while True:
             result = json.loads(self.ws.recv())
@@ -638,9 +634,7 @@ class RoomChat:
 #         except websocket.WebSocketException:
 #             pass
 #     def rock(self) -> str:
-#         self.ws = websocket.create_connection(
-#             "wss://hack.chat/chat-ws"
-#         )
+#         self.ws = websocket.create_connection(WSADD)
 #         self._sendPacket({"cmd": "join", "channel": self.channel, "nick": self.nick + "#" + self.trip})
 #         self._sendPacket({"cmd": "setmotd", "motd": getMotd()})
 #         self.ws.close()
@@ -693,6 +687,9 @@ with open("files/reply.json", encoding="utf8") as f:
 with open("files/answer.json", encoding="utf8") as f:
     answer = json.loads(dec(f.read()))
 # 常量
+WSADD = "wss://hack.chat/chat-ws"
+# WSADD = "ws://localhost:8765"
+
 PREFIX, WHTFIX, OWNFIX, EHHH = ";", "0", ".", "&zwj;"
 KICK, AUTH, MOD = "/w mbot kick", info["auth"], info["mod"]
 URL, TOKEN = "http://play.simpfun.cn:17254/awaya/", info["token"]
@@ -1133,7 +1130,7 @@ lineReply = {
     "0.0": ["0.0.0", ".0.", ";0;"],
     "menu": ["菜单", "别发菜单"],
     "游戏": ["\n".join([
-        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b)",
+        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s)",
         "发送`<前缀> help`获取对应帮助"
     ])],
 

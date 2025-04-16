@@ -61,7 +61,7 @@ def endGame():
 def sendBoard() -> str:
     mae = CLOLUMN+[f"|{n}|"+ "|".join(i) +"|" for i, n in zip(CCList[3], LETTERS)]
     return "\n".join(mae)
-def CCreply(sender: str, msg: str) -> str:
+def main(sender: str, msg: str) -> str:
         res = re.search(r"^([ABCDEFGHIJ])([123456789]) ([ABCDEFGHIJ])([123456789])$", msg.upper())
         if CCList[0]:
             if sender in CCList[2]:

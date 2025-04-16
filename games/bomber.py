@@ -40,7 +40,7 @@ def bombRule(context, num=None):
     if player == context.nick:
         bombRule(context) # 递归赛高~
 
-def bombReply(context, sender, msg):
+def main(context, sender, msg):
     if msg == "help":
         context.appText(BOMBMENU)
     elif msg == "加入":

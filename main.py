@@ -1,11 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games.chess import CCreply
-from games.poker import pkReply
-from games.uno import unoReply
-from games.bomber import bombReply, bombs
-from games.truth import *
+from games import bomber, chess, countryKill, poker, truth, uno
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -37,7 +33,7 @@ class Awaya:
             nick = info["nick"]
         while True:
             try:
-                self.ws = websocket.create_connection("wss://hack.chat/chat-ws")
+                self.ws = websocket.create_connection(WSADD)
             except:
                 time.sleep(30)
             else:
@@ -456,7 +452,7 @@ class Awaya:
                 if (maxi-mini) < 1:
                     context.appText("两数的差别过小，请重新设置！")
                 else:
-                    bombs[3], bombs[4] = mini, maxi
+                    bomber.bombs[3], bomber.bombs[4] = mini, maxi
                     context.appText("设置成功！")        
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
@@ -777,7 +773,7 @@ class Awaya:
 
         elif msg[0] == "r" and type_ != "whisper":
             if msg == "r":
-                context.appText(truthDo(sender, self.users.getAttr(sender, "hash")))
+                context.appText(truth.truthDo(sender, self.users.getAttr(sender, "hash")))
             elif msg[:2] == "r ":
                 sakura = msg.split()[1:]
                 try:
@@ -798,15 +794,17 @@ class Awaya:
                 try: context.appText(rollTo1(int(digit)))
                 except ValueError as e: context.appText(rollTo1(1000))
         elif msg.startswith("cc ") and type_ != "whisper":
-            context.appText(CCreply(sender, msg[3:]))
+            context.appText(chess.main(sender, msg[3:]))
         elif msg.startswith("p ") and type_ != "whisper":
-            pkReply(context, sender, msg[2:].replace("。", "."))
+            poker.main(context, sender, msg[2:].replace("。", "."))
         elif msg.startswith("t ") and type_ != "whisper":
-            context.appText(truthReply(msg[2:]))
+            context.appText(truth.main(msg[2:]))
         elif msg.startswith("u ") and type_ != "whisper":
-            unoReply(context, sender, msg[2:].replace("。", "."))
+            uno.main(context, sender, msg[2:].replace("。", ".").replace("？！", "?!"))
         elif msg.startswith("b ") and type_ != "whisper":
-            bombReply(context, sender, msg[2:])
+            bomber.main(context, sender, msg[2:])
+        elif msg.startswith("s ") and type_ != "whisper":
+            countryKill.main(context, sender, msg[2:].replace("。", "."))
 
         # 古老的梗
         elif namePure(msg) == sender:
@@ -888,7 +886,7 @@ class Awaya:
             self.looker.addUser(nick)
             hasher.addHash(nick, hash_)
 
-            if user["isme"]:
+            if nick == self.nick:
                 self.userid = user["userid"]
             if banned.check(**user):
                 self.sendMsg(self.kick(nick))
