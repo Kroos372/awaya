@@ -12,5 +12,7 @@
   ],
   "auth": "",
   "mod": "",
-  "token": ""
+  "token": "",
+
+  "debug": false
 }

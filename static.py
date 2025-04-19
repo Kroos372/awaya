@@ -76,12 +76,12 @@ def reply(sender: str, msg: str, api: bool=True) -> str:
         return None # 乖巧
 ## 长消息上传
 def toWeb(text):
-    # try:
-    #     requests.post(URL, data={"token": TOKEN, "text": text}, timeout=10)
-    #     return URL
-    # except:
-    #     return text[:512]
-    return text[:512] + "\n...太长了。"
+    try:
+        requests.post(URL, data={"token": TOKEN, "text": text}, timeout=10)
+        return URL
+    except:
+        return text[:512] + "\n...太长了。"
+    # return text[:512] + "\n...太长了。"
 ## 随机字符串
 def getStr(length=16) -> str:
     dinnerbone = ""
@@ -159,6 +159,17 @@ def colorPic(args: str=""):
 def nowDay() -> str:
     now = time.gmtime(time.time() + 28800)
     return f"{now.tm_year}{now.tm_mon:0>2}{now.tm_mday:0>2}"
+# 分解质因数！这是我的数学极限了，呜呜……
+def getPrime(i, factors) -> list:
+    if i == 1:
+        return ["没法分解啊啊啊啊(+﹏+)"]
+    for x in range(2, int(i**0.5 + 1)):
+        if i % x == 0:
+            factors.append(str(x))
+            getPrime(int(i / x), factors)
+            return factors
+    factors.append(str(i))
+    return factors
 ## Message Of The Day
 # def getMotd() -> str:
 #     now = time.gmtime(time.time() + 28800)
@@ -181,6 +192,10 @@ def nowDay() -> str:
 #         text += f"\n距离下个休息日 **{holiday['name']}** 还有 **{holiday['rest']}** 天"
 
 #     return userData["motd"] + "\n&ensp;\n---\n" + text
+## 增加消息数
+def updateCount():
+    msgCount[sysList[3]] += 1
+    writeJson("msgCount.json", msgCount)
 
 # 玩类玩的
 ## 仿rate-limiter
@@ -249,7 +264,7 @@ class Peeper:
         if len(text) > 256:
             self.longlong.append(f"{nick}:\n{text}")
             nick = "*"
-            text = f"`{text[:30]}...`全文见 {PREFIX}long {len(self.longlong)-1}".replace("\n", "")
+            text = f"`{nick}: {text[:30]}...`全文见 {PREFIX}long {len(self.longlong)-1}".replace("\n", "")
         self.allMsg.append({
             "nick": nick,
             "text": text,
@@ -686,13 +701,15 @@ with open("files/reply.json", encoding="utf8") as f:
     replys = json.loads(dec(f.read()))
 with open("files/answer.json", encoding="utf8") as f:
     answer = json.loads(dec(f.read()))
+with open("files/msgCount.json", encoding="utf8") as f:
+    msgCount = json.loads(dec(f.read()))
 # 常量
 WSADD = "wss://hack.chat/chat-ws"
 # WSADD = "ws://localhost:8765"
 
 PREFIX, WHTFIX, OWNFIX, EHHH = ";", "0", ".", "&zwj;"
 KICK, AUTH, MOD = "/w mbot kick", info["auth"], info["mod"]
-URL, TOKEN = "http://play.simpfun.cn:17254/awaya/", info["token"]
+URL, TOKEN = info["url"], info["token"]
 LATEXOOM = r"$\begin{pmatrix}qaq\\[20231128em]\end{pmatrix}$"
 NAME, OWNER = info["name"], info["owner"]
 
@@ -700,9 +717,9 @@ MENUMIN = "\n".join([
     "早",
     "普通用户: ",
     f">前缀=={PREFIX}==:",
-    "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu",
+    "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot",
     "无前缀:",
-    "r, rollen, time, 游戏",
+    "r, rollen, rprime, time, 游戏",
     "",
     "白名单用户：",
     f">前缀=={WHTFIX}==:",
@@ -1072,7 +1089,7 @@ WTCOMMANDS = {
 HEADERS = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"}
 WEEKS = [None, "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
 CLOCKS = [
-    "0点了，夜深快准备睡觉吧~",
+    "0点了，生日的人生日快乐，没过生日的也要快乐哦~",
     "都已经1点，还不睡觉吗？",
     "2点了，惬意而祥和的时光啊。",
     "3点了，月光依然安静地笼罩着大地。",
@@ -1089,7 +1106,7 @@ CLOCKS = [
     "14点到了，要做些什么事吗？",
     "15点了，是不是该喝杯下午茶？",
     "16点了，摸一摸信赖的人吧~",
-    "17点了，下午的时间过去了一多半了吧。",
+    "17点了，忙碌的间隙也不要忘记休息啦。",
     "18点了，有谁准备快乐地下班了吗？",
     "19点了，今天有收获到什么吗？",
     "20点了，晚上应该怎么度过呢？",
@@ -1097,15 +1114,39 @@ CLOCKS = [
     "22点了，早睡早起身体好哦~",
     "23点啦，原来都还在聊天吗。"
 ]
+# bo_od
 KAWAII = [
     "sender棒棒",
     "sender是小天使",
     "sender最可爱了"
 ]
+# Afk_bot
+BODY_PARTS = [
+    "heart",    # 心脏
+    "head",     # 头部
+    "chest",    # 胸部
+    "lung",     # 肺
+    "stomach",  # 腹部/胃
+    "arm",      # 手臂
+    "leg",      # 腿
+    "hand",     # 手
+    "foot",     # 脚
+    "neck",     # 脖子
+    "shoulder", # 肩膀
+    "knee",     # 膝盖
+    "eye",      # 眼睛
+    "ear",      # 耳朵
+    "mouth",    # 嘴巴
+    "throat",   # 喉咙
+    "brain",    # 大脑
+    "liver",    # 肝脏
+    "rib",      # 肋骨
+    "spine"     # 脊柱
+]
 
 # 全局变量
-## [0涩图开关, 1报时开关, 2休眠开关, 3当前日期, 4sender nick, 5报错是否重启, 6心跳频率(秒), 7stfu时间, 8玩的, 9复读库， 10Ddebug开关]
-sysList = [False, True, False, nowDay(), "", False, 120, 0, False, []]
+## [0涩图开关, 1报时开关, 2休眠开关, 3当前日期, 4sender nick, 5报错是否直接报错, 6心跳频率(秒), 7stfu时间, 8玩的, 9复读库, 10突然说话值]
+sysList = [False, True, False, nowDay(), "", info["debug"], 120, 0, False, [], 960]
 
 banWords = userData["banWords"]
 whiteList = userData["whiteList"]
@@ -1128,9 +1169,8 @@ hasher = Hasher(data)
 lineReply = {
     # 纪念零姬……
     "0.0": ["0.0.0", ".0.", ";0;"],
-    "menu": ["菜单", "别发菜单"],
     "游戏": ["\n".join([
-        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s)",
+        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g)",
         "发送`<前缀> help`获取对应帮助"
     ])],
 
@@ -1143,3 +1183,15 @@ cmdList = {
     "ign": lambda: f"当前被忽略：\n{ignore.list()}",
     "ban": lambda: f"当前被封禁：\n{banned.list()}"
 }
+
+if not os.path.exists("logs"):
+    os.mkdir("logs")
+if not os.path.exists("traceback"):
+    os.mkdir("traceback")
+
+if sysList[3] not in msgCount:
+    msgCount[sysList[3]] = 0
+for owner in OWNER:
+    if not owner in whiteList:
+        whiteList.append(owner)
+        writeJson("userData.json", userData)

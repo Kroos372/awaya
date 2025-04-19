@@ -1,7 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, countryKill, poker, truth, uno
+from games import bomber, chess, countryKill, poker, truth, uno, dryEye
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -17,6 +17,22 @@ class Awaya:
         self.afker = Afker()
         self.users = Users()
         self.looker = Looker()
+        
+        # 从日志加载200条peep
+        lines = []
+        if os.path.exists(f"logs/{self.channel}_{sysList[3]}.txt"):
+            with open(f"logs/{self.channel}_{sysList[3]}.txt", "r", encoding="utf8") as f:
+                for line in f:
+                    if "：" in line and not line.startswith(self.nick):
+                        lines.append(line)
+                    if len(lines) > 200:
+                        lines.pop(0)
+            for line in lines:
+                array = line.split("：")
+                _nick = array[0]
+                if not ignore.check(nick=_nick):
+                    self.peeper.push(_nick, "：".join(array[1:]))
+        # 干活
         self._reconnect()
         threading.Thread(target=self._clock).start()
         threading.Thread(target=self._heartbeat).start()
@@ -86,6 +102,7 @@ class Awaya:
                     pass
             if hour == 0:
                 sysList[3] = nowDay()
+                msgCount[sysList[3]] = 0
                 # MotdChat(self.channel, MOD).rock()
     def sendMsg(self, text: str, cid: str="", force: bool=False):
         if cid:
@@ -109,6 +126,7 @@ class Awaya:
                 elif cmd == "warn":
                     text = result["text"]
                     print(text)
+                    self.log(text)
                     # 史上最不优雅的判断
                     if text == "Nickname taken":
                         self._reconnect(rand=True)
@@ -122,12 +140,14 @@ class Awaya:
                     time.sleep(6)
                     self._reconnect()
                 elif cmd == "chat":
+                    updateCount()
                     self.onMsg(result["text"], rnick, result.get("trip"), "chat", customId=result.get("customId"), userid=result["userid"])
                 elif cmd == "onlineAdd":
                     self.onJoin(rnick, result)
                 elif cmd == "onlineRemove":
                     self.onLeave(rnick)
                 elif cmd == "emote":
+                    updateCount()
                     self.onEmote(result["nick"], result["text"])
                 elif cmd == "info":
                     if result.get("type") == "whisper":
@@ -151,19 +171,19 @@ class Awaya:
         # 否则报错
         except BaseException as e:
             error = traceback.format_exc(chain=False)
-            if not sysList[5]:
+            if sysList[5]:
                 self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{error}\n```", True)
             else:
                 filename = e.__class__.__name__ + ftime(now(), "%Y_%m_%d_%H_%M_%S")
                 with open(f"traceback/{filename}.txt", "w", encoding="utf8") as f:
                     f.write(error)
-                self.sendMsg(f"被玩坏了，呜呜呜……即将重启，请查看报错文件……", True)
-                time.sleep(6)
-                self._reconnect()
+                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}\n```\n具体请查看文件……", True)
+                # time.sleep(6)
+                # self._reconnect()
         self.rock()
 
     # 小憩一会
-    def ufts(self, sec):
+    def ufts(self, sec: int):
         sysList[2] = True
         sec = now() + sec
         if sec > sysList[7]:
@@ -222,14 +242,14 @@ class Awaya:
     def updateFunc(self, func, cid, *args):
         threading.Thread(target=lambda: self.updateMsg("overwrite", func(*args), cid)).start()
 
-    def selfSelf(self, context, msg, sender, trip, type_, **kwargs):
+    def selfSelf(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
         # 日志, 添加look与seen
         if type_ != "whisper":
             self.log(f"{sender}：{msg}")
             sawer.add(sender, trip, msg)
             self.looker.add(sender)
         elif sender != self.nick:
-            self.log(f"{sender}私信：{msg}")
+            self.log(f"{sender}私信:{msg}")
         # stfu
         if sysList[2] and (self.users.getAttr(sysList[4], "trip") not in whiteList):
             return
@@ -239,20 +259,20 @@ class Awaya:
                 sysList[8] = False
             else:
                 context.returns = True
-    def premade(self, context, msg, sender, trip, type_, **kwargs):
+    def premade(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
         user = self.users.getUser(sender)
         if type_ != "whisper":
             # rl
-            context.appText(self.rl(sender, msg), "part", force=True)
+            # context.appText(self.rl(sender, msg), "part", force=True)
             # 加peep
             if not ignore.check(**user):
                 self.peeper.push(sender, msg, kwargs.get("customId"), kwargs.get("userid"))
             # 随机复读
-            if 1 < len(msg) and len(msg) < 256:
+            if 2 < len(msg) and len(msg) < 256:
                 sysList[9].append(msg)
-        elif trip not in whiteList:
-            # 私信rl更严
-            context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part", force=True)
+        # elif trip not in whiteList:
+        #     # 私信rl更严
+        #     context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part", force=True)
         try:
             command = msg.split()[0]
         except:
@@ -443,17 +463,24 @@ class Awaya:
                 context.appText("桥豆麻袋", "part", cid=cid)
                 kita = RoomChat(lChannel, cid, self.nick)
                 self.updateFunc(kita.rock, cid)
-            elif command == "setb":
+            elif command == "bomb":
                 sp = msg.split()
                 try:
                     mini, maxi = int(sp[1]), int(sp[2])
                 except:
-                    return context.appText("输入格式有误，请在0setb 后面用空格隔开，输入最小值和最大值两个整数！")
+                    return context.appText(f"输入格式有误，请在{WHTFIX}bomb 后面用空格隔开，输入最小值和最大值两个整数！")
                 if (maxi-mini) < 1:
                     context.appText("两数的差别过小，请重新设置！")
                 else:
                     bomber.bombs[3], bomber.bombs[4] = mini, maxi
                     context.appText("设置成功！")        
+            elif command == "fun":
+                try:
+                    sysList[10] = int(msg.split()[1])
+                except (IndexError, TypeError):
+                    context.appText(f"参数有误，请输入数字")
+                else:
+                    context.appText("设置随机拟人概率成功！")
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
@@ -600,19 +627,19 @@ class Awaya:
         # 检查留言
         context.appText(left.check(**user), "whisper")
     # 古兰枝掌管afk的神
-    def afks(self, context, msg, sender, trip, type_, **kwargs):
+    def afks(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
         if type_ != "whisper":
             context.appText(self.afker.check(sender))
             if re.match(r"^afk\b", msg):
                 context.appText(self.afker.add(sender, msg[4:44] or "AFK"))
             if "@" in msg:
                 context.appText(self.afker.alert(msg))
-    def mainfunc(self, context, msg, sender, trip, type_, **kwargs):
+    def mainfunc(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
         try:
             command = msg.split()[0]
         except:
             command = ""
-        icb9 = random.randint(1, 134)
+        icb9 = random.randint(1, 1000)
 
         if msg[0] == PREFIX:
             command = command[1:]
@@ -752,14 +779,30 @@ class Awaya:
                     cid = getStr(6)
                     context.appText("少女祈祷中. . .", "part", cid=cid)
                     self.updateFunc(colorPic, cid, msg[6:])
-
+            elif command == "prime":
+                try:
+                    digit = msg[7:20]
+                    eq = "\\*".join(getPrime(int(digit), []))
+                    context.appText(f"{digit}={eq}")
+                except ValueError:
+                    context.appText("请输入一个***正整数***啊啊啊啊(￢_￢)")
+            elif command == "hug":
+                to = namePure(msg[5:])
+                context.appText(f"/me @{sender} gives @{to} a hug.", "part")
+            elif command == "shoot":
+                to = namePure(msg[7:])
+                if random.random() > 0.15:
+                    through = random.choice(BODY_PARTS)
+                    context.appText(f"/me @{sender} shoots @{to} through the {through}!", "part")
+                else:
+                    context.appText(f"/me @{sender} shoots @{to}, but missed!", "part")
         elif namePure(msg) == self.nick:
-            if icb9 > 130:
+            if icb9 > 990:
                 context.appText(random.choice(replys[1]).replace("sender", sender))
-            elif icb9 > 80:
-                context.appText("发送菜单了解我的功能~")
-            else:
+            elif icb9 < 369:
                 context.appText(random.choice(replys[0]).replace("sender", sender))
+            else:
+                context.appText("发送菜单了解我的功能~")
         elif msg.startswith(f"@{self.nick} "):
             msg = msg[len(self.nick)+2:]
             if msg == "提问":
@@ -793,18 +836,33 @@ class Awaya:
                 digit = msg[7:25]
                 try: context.appText(rollTo1(int(digit)))
                 except ValueError as e: context.appText(rollTo1(1000))
+            elif command == "rprime":
+                digit = msg[7:20]
+                try:
+                    dig = random.randint(1, int(digit))
+                    if dig > 0:
+                        eq = "\\*".join(getPrime(dig, []))
+                        context.appText(f"{dig}={eq}")
+                    else:
+                        raise ValueError
+                except ValueError as e:
+                    digit = str(random.randint(1, 1000))
+                    eq = "\\*".join(getPrime(int(digit), []))
+                    context.appText(f"{digit}={eq}")
         elif msg.startswith("cc ") and type_ != "whisper":
-            context.appText(chess.main(sender, msg[3:]))
+            context.appText(chess.main(sender, msg[3:]).strip())
         elif msg.startswith("p ") and type_ != "whisper":
-            poker.main(context, sender, msg[2:].replace("。", "."))
+            poker.main(context, sender, msg[2:].replace("。", ".").strip())
         elif msg.startswith("t ") and type_ != "whisper":
-            context.appText(truth.main(msg[2:]))
+            context.appText(truth.main(msg[2:]).strip())
         elif msg.startswith("u ") and type_ != "whisper":
-            uno.main(context, sender, msg[2:].replace("。", ".").replace("？！", "?!"))
+            uno.main(context, sender, msg[2:].replace("。", ".").replace("？！", "?!").strip())
         elif msg.startswith("b ") and type_ != "whisper":
-            bomber.main(context, sender, msg[2:])
+            bomber.main(context, sender, msg[2:].strip())
         elif msg.startswith("s ") and type_ != "whisper":
-            countryKill.main(context, sender, msg[2:].replace("。", "."))
+            countryKill.main(context, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("g ") and type_ != "whisper":
+            dryEye.main(context, sender, msg[2:].replace("。", ".").strip())
 
         # 古老的梗
         elif namePure(msg) == sender:
@@ -815,10 +873,11 @@ class Awaya:
                 context.appText(call())
             else:
                 context.appText(random.choice(call).replace("sender", sender))
-        elif icb9 > 128:
-            if icb9 == 129:
+        elif icb9 > sysList[10]:
+            fcjz = random.randint(1, 10)
+            if fcjz > 8:
                 context.appText(random.choice(KAWAII).replace("sender", sender))
-            elif icb9 < 132:
+            elif fcjz > 5:
                 context.appText(chatApi(msg))
             else:
                 context.appText(EHHH + random.choice(sysList[9]))
@@ -962,10 +1021,5 @@ class Awaya:
             self.sendMsg(**kws)
 
 if __name__ == "__main__":
-    for owner in OWNER:
-        if not owner in whiteList:
-            whiteList.append(owner)
-            writeJson("userData.json", userData)
-
     bocchi = Awaya(info["channel"], info["nick"], info["passwd"], info["color"])
     bocchi.rock() # 波门

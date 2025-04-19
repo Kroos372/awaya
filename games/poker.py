@@ -4,8 +4,9 @@ import random, re
 pokers = [False, {}, 0, [], [], None, False, [], 0, None, None]
 CARDS = ["3", "4", "5", "6", "7", "8", "9", "H", "J", "Q", "K", "A", "2"]
 JOKERS = ["小", "大"]
-SORT = dict(zip(CARDS+JOKERS, range(15)))
+SORT = CARDS + JOKERS
 PINIT = CARDS*4 + JOKERS
+
 POKERMENU = "\n".join([
     "斗地主...",
     "p 加入: 开始或加入一场斗地主，满三人后自动开始。",
@@ -26,6 +27,7 @@ POKERRULE = "\n".join([
     "剩余的就将这两种组合，不同组别用空格隔开即可，例如==p 4-5*3 7 9== ==p 7*4 99 HH==……",
     "玩得开心~"
 ])
+
 def allCards() -> str:
     return "玩家牌数: " + ", ".join([f"{i}: {len(pokers[1][i])}" for i in pokers[7]])
 def landonwer(context, sender: str): 
@@ -34,7 +36,7 @@ def landonwer(context, sender: str):
     pokers[9] = pokers[2]
     pokers[2] = pokers[7].index(pokers[5])
     pokers[1][sender] += pokers[4]
-    pokers[1][sender].sort(key=lambda x: SORT[x])
+    pokers[1][sender].sort(key=lambda x: SORT.index(x))
     cards = " ".join(pokers[1][sender])
     context.appText(f"{' '.join(pokers[4])}是底牌，{sender}是地主。\n游戏开始，地主@{sender} 先出，发送==p 规则==可以查看出牌规则哦；")
     context.appText(f"以下是您的牌：{cards}", "whisper")
@@ -55,6 +57,7 @@ def endPoker():
     pokers[0], pokers[1], pokers[2] = False, {}, 0
     pokers[4], pokers[8], pokers[10] = [], 0, None
     pokers[5] = None
+
 def main(context, sender: str, msg: str):
     msg = msg.upper()
     if msg == "规则":
@@ -64,6 +67,8 @@ def main(context, sender: str, msg: str):
     elif msg == "结束" and sender in pokers[7]:
         endPoker()
         context.appText("唔，结束了;;;;")
+    elif msg == "CHECK" and sender in pokers[7] and not pokers[6]:
+        context.appText(f"地主是{pokers[5]}, 上家出的牌是：{pokers[10]}\n{allCards()}\n以下是您的牌：{' '.join(pokers[1][sender])}", "whisper")
     elif pokers[0] and sender == pokers[7][pokers[2]]:
         # 叫牌阶段
         if pokers[6]:
@@ -90,14 +95,15 @@ def main(context, sender: str, msg: str):
         else:
             # 跳过
             if msg == ".":
-                pokers[2] = (pokers[2]+1)%3
-                if pokers[2] == pokers[9]:
-                    pokers[10] = None
-                    context.appText(f"所有玩家都要不起，@{pokers[7][pokers[2]]} 继续出牌。")
+                if pokers[10] is None:
+                    context.appText("由你开始的啦，随便出一张吧。")
                 else:
-                    context.appText(f"{sender}跳过，轮到@{pokers[7][pokers[2]]} 。")
-            elif msg == "CHECK":
-                context.appText(f"地主是{pokers[5]}, 上家出的牌是：{pokers[10]}, {allCards()}\n以下是您的牌：{' '.join(pokers[1][sender])}", "whisper")
+                    pokers[2] = (pokers[2]+1)%3
+                    if pokers[2] == pokers[9]:
+                        pokers[10] = None
+                        context.appText(f"所有玩家都要不起，@{pokers[7][pokers[2]]} 继续出牌。")
+                    else:
+                        context.appText(f"{sender}跳过，轮到@{pokers[7][pokers[2]]} 。")
             else:
                 senderCards = pokers[1][sender]
                 # 本轮第一发
@@ -182,12 +188,13 @@ def main(context, sender: str, msg: str):
                     last = pokers[10]
                     # 单张
                     if last in SORT and msg in SORT and msg in senderCards:
-                        if SORT[msg] <= SORT[last]: return context.appText(f"你的牌没有{last}大！")
+                        if SORT.index(msg) <= SORT.index(last):
+                            return context.appText(f"你的牌没有{last}大！")
                         senderCards.remove(msg)
                     # 对子或三张或四张
                     elif re.match(r"^.\*.$", last) and re.match(rf"^[2-9AHJQK]\*{last[-1]}$", msg):
                         if senderCards.count(msg[0])>=int(msg[-1]):
-                            if SORT[msg[0]] <= SORT[last[0]]: return context.appText(f"你的牌没有{last}大！")
+                            if SORT.index(msg[0]) <= SORT.index(last[0]): return context.appText(f"你的牌没有{last}大！")
                             for _ in range(int(msg[-1])): senderCards.remove(msg[0])
                         else: return context.appText("牌数不足！")
                     # 顺子
@@ -210,8 +217,8 @@ def main(context, sender: str, msg: str):
                         else:
                             condition = senderCards.count(msg[0])>=(int(msg[2])+mult)
                         if not condition: return context.appText("牌数不足！")
-                        elif SORT[last[0]] >= SORT[msg[0]]: return context.appText(f"你的牌没有{last}大！")
-                        elif len(msg.split()[1]) != len(last.split()[1]) or SORT[msg[0]] <= SORT[last[0]]: return context.appText("牌型不符合！")
+                        elif SORT.index(last[0]) >= SORT.index(msg[0]): return context.appText(f"你的牌没有{last}大！")
+                        elif len(msg.split()[1]) != len(last.split()[1]) or SORT.index(msg[0]) <= SORT.index(last[0]): return context.appText("牌型不符合！")
                         for i in range(int(msg[2])): senderCards.remove(msg[0])
                         for i in range(mult): senderCards.remove(msg[-1])
                     # 双顺、三顺
@@ -231,7 +238,7 @@ def main(context, sender: str, msg: str):
                         larray = last.split()[1:]
                         if senderCards.count(msg[0])==4 and senderCards.count(array[0])>=len(array[0]) and senderCards.count(array[1])>=len(array[1]):
                             if len(larray[-1]) != len(array[-1]): return context.appText("牌型不符！")
-                            elif SORT[last[0]] >= SORT[msg[0]]: return context.appText(f"你的牌没有{last}大！")
+                            elif SORT.index(last[0]) >= SORT.index(msg[0]): return context.appText(f"你的牌没有{last}大！")
                             for _ in range(4): senderCards.remove(msg[0])
                             for i in "".join(array): senderCards.remove(i)
                         else: return context.appText("牌不够，;;;")
@@ -240,7 +247,7 @@ def main(context, sender: str, msg: str):
                         start, end = CARDS.index(msg[0]), CARDS.index(msg[2])
                         lstart, lend = CARDS.index(last[0]), CARDS.index(last[2])
                         if (end-start) != (lend-lstart): return context.appText("牌数不符！")
-                        elif SORT[last[0]] >= SORT[msg[0]]: return context.appText(f"你的牌没有{last}大！")
+                        elif SORT.index(last[0]) >= SORT.index(msg[0]): return context.appText(f"你的牌没有{last}大！")
                         else:
                             array = msg[6:].split(" ")
                             if sameLen(array) and len(array) == (end-start+1):
@@ -258,7 +265,7 @@ def main(context, sender: str, msg: str):
                     elif re.match(r"^[2-9AHJQK]\*4$", msg) and last != "王炸":
                         if senderCards.count(msg[0])<4: return context.appText("牌数不足！")
                         else:
-                            if re.match(r"^.*4$", last) and SORT[int(last[0])] >= SORT[int(msg[0])]:
+                            if re.match(r"^.*4$", last) and SORT.index(int(last[0])) >= SORT.index(int(msg[0])):
                                 return context.appText(f"你的牌没有{last}大!")
                             for _ in range(4): senderCards.remove(msg[0])
                     # 6
@@ -267,7 +274,7 @@ def main(context, sender: str, msg: str):
                         else:
                             senderCards.remove("大")
                             senderCards.remove("小")
-                    else: return context.appText("牌型不符或牌数不足，请查看规则后重试;")
+                    else: return context.appText(f"牌型不符或牌数不足，上家的牌是{pokers[10]}。请查看规则后重试;")
 
                 pokers[10] = msg
                 pokers[9] = pokers[2]
@@ -307,7 +314,7 @@ def main(context, sender: str, msg: str):
                     pokers[1][pokers[7][i%3]].append(v)
                 # 整理牌、告诉牌
                 for k, v in pokers[1].items():
-                    v.sort(key=lambda x: SORT[x])
+                    v.sort(key=lambda x: SORT.index(x))
                     cards = " ".join(v)
                     context.appText(f"以下是您的牌：{cards}", "whisper", to=k)
                 own = random.choice(pokers[7])
@@ -321,3 +328,64 @@ def main(context, sender: str, msg: str):
         if msg[-1] == "t":
             del pokers[1][sender]
             context.appText("已成功退出(‾◡◝)")
+
+# class AutoBot:
+#     def __init__(self, nick: str, cards: list):
+#         self.nick = nick
+#         self.cards = cards
+#         self.landlord = False # 原来是这个词
+        
+#         self.cards.sort(key=lambda x: SORT.index(x))
+
+#     def getCardType(self) -> dict:
+#         setCards = set(self.cards)
+#         allType = {
+#             1: [],
+#             2: [],
+#             3: [],
+#             4: [],
+#             "st": self.getStraights(setCards, 5)
+#         }
+        
+#         for card in setCards:
+#             allType[self.cards.count(card)].append(card)
+
+#         allType["2st"] = self.getStraights(allType[2], 3)
+#         allType["3st"] = self.getStraights(allType[3], 2)
+#         if "大" == self.cards[-1] and "小" == self.cards[-2]:
+#             allType["王炸"] = True
+#         else:
+#             allType["王炸"] = False
+
+#         return allType
+    
+#     def getStraights(self, cards, min_len: int) -> dict:
+#         result = {}
+#         valids = [SORT.index(i) for i in cards if i not in "2小大"]
+        
+#         if len(valids) < min_len:
+#             return result
+        
+#         start = 0
+#         for i in range(1, len(valids)):
+#             if valids[i] != valids[i-1] + 1:
+#                 length = len(valids[start:i])
+#                 if length >= min_len:
+#                     result[start] = length
+#                 start = i
+#         if len(valids) - start >= min_len:
+#             result[start] = len(valids) - start
+
+#         return result
+
+#     def play(self) -> str:
+#         if pokers[6]:
+#             text = "0"
+#         else:
+#             types = self.getCardType()
+#             if pokers[10] is None:
+#                 pass
+#             else:
+#                 pass
+        
+#         return "p " + text

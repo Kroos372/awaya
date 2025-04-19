@@ -11,15 +11,13 @@
 
 - 加速:```pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt ```
 
-2. 自定义[info.json](files/info.json)。  
+1. 自定义[info.json](files/info.json)。  
 
-3. 运行[init.py](init.py)。  
-
-4. 运行[main.py](main.py)。  
+2. 运行[main.py](main.py)。  
 
 ### 别的
 特别感谢[DPG](https://github.com/Doppelganger-phi)与[Blaze](https://github.com/geGDVS)提供过的服务器支持。  
-感谢Blaze的部分代码贡献，以及所有使用过阿瓦娅的大家。
+感谢Blaze, sora的部分代码贡献，以及所有使用过阿瓦娅的大家。
 
 ## English ver.
 ### Introduction
@@ -32,10 +30,8 @@ Rewriten from [HackChat](https://github.com/gkbrk/hackchat)。
 
 2. Customize [info.json](files/info.json).
 
-3. Run [init.py](init.py)。
-
-4. Run [main.py](main.py).  
+3. Run [main.py](main.py).  
 
 ### Others
 Special thanks to [DPG](https://github.com/Doppelganger-phi) and [Blaze](https://github.com/geGDVS) for having provided server support.  
-Thanks to Blaze for partly code contributions, and everyone who has used Awaya.
+Thanks to Blaze, sora for partly code contributions, and everyone who has used Awaya.

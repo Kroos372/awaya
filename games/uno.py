@@ -251,8 +251,9 @@ def main(context, sender, msg):
             lastid_ = (id_ - 1) % len(unoList[1])
             if card == ".":
                 add4(id_)
-                context.appText(f"{sender}不质疑，加4张，颜色变为=={unoList[5]}==。轮到@{unoList[4]} ！")
+                context.appText(f"{sender}不质疑，加4张，颜色变为=={unoList[8]}==。轮到@{unoList[4]} ！")
                 context.appText(f"你新增了4张牌，这是你现在的牌：\n{formatCards(id_)}。", "whisper", to=unoList[1][id_])
+                unoList[5] = unoList[8] + "?"
                 unoList[6] = False
             elif card == "?!":
                 if any(unoList[5] == i[0] for i in unoList[2][lastid_]):
