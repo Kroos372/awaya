@@ -327,7 +327,7 @@ class DryEye:
             self.checkPass = 0
             self.latestPlayer = player
             self.poker[player][1][card] -= 1
-            self.context.appText(f"{player_name}出了{cardsRank[card]}，轮到{self.poker[self.next_player][0]}出牌")
+            self.context.appText(f"{player_name}出了{cardsRank[card]}，@轮到{self.poker[self.next_player][0]} 出牌")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -369,7 +369,7 @@ class DryEye:
             self.upCardsKind = "对子"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了对{cardsRank[card]}，轮到{self.poker[self.next_player][0]}出牌")#wawa这里已经改过了 owob self.poker[player][0]是昵称 self.poker[player][1]是牌桶
+            self.context.appText(f"{player_name}出了对{cardsRank[card]}，轮到@{self.poker[self.next_player][0]} 出牌")#wawa这里已经改过了 owob self.poker[player][0]是昵称 self.poker[player][1]是牌桶
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -416,7 +416,7 @@ class DryEye:
             self.upCardsKind = "顺子"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了顺子{self.upCardsInfo}，轮到{self.poker[self.next_player][0]}出牌")
+            self.context.appText(f"{player_name}出了顺子{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -463,7 +463,7 @@ class DryEye:
             self.upCardsKind = "双顺"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了双顺{self.upCardsInfo}，轮到{self.poker[self.next_player][0]}出牌力")
+            self.context.appText(f"{player_name}出了双顺{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌力")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -498,7 +498,7 @@ class DryEye:
             self.next_player = (player % self.playerNumero) + 1
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了炸弹{self.upCardsInfo}，轮到{self.poker[self.next_player][0]}出牌")
+            self.context.appText(f"{player_name}出了炸弹{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌")
             self.playedCards[player] = True
 
             # 处理倍数轮
@@ -588,7 +588,7 @@ class DryEye:
                 else:
                     self.endRound()
             else:
-                self.context.appText(f"{self.poker[player][0]} 不想出（哼哼，那就轮到{self.poker[self.next_player][0]}出牌了")
+                self.context.appText(f"{self.poker[player][0]} 不想出（哼哼，那就轮到@{self.poker[self.next_player][0]} 出牌了")
             return
         elif command == "":
             self.context.appText("雅达雅达（波奇摇头）\n![](https://img.duotegame.com/article/contents/2022/10/31/small_2022103134200180.gif)")

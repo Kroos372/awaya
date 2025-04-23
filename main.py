@@ -1,7 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, countryKill, poker, truth, uno, dryEye
+from games import bomber, chess, countryKill, poker, truth, uno, dryEye, oddEven
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -274,7 +274,7 @@ class Awaya:
         #     # 私信rl更严
         #     context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part", force=True)
         try:
-            command = msg.split()[0]
+            command = msg.split(" ")[0]
         except:
             command = "" # 服了
         if msg[0] == WHTFIX and trip in whiteList:
@@ -481,6 +481,22 @@ class Awaya:
                     context.appText(f"参数有误，请输入数字")
                 else:
                     context.appText("设置随机拟人概率成功！")
+            elif command == "regst":
+                array = msg.split(" ")
+                if len(array) == 1:
+                    context.appText(" ".join(bank.wait) or "当前没有请求")
+                elif array[1] == "all":
+                    for trip_ in bank.wait:
+                        bank.register(trip_)
+                elif array[1] == "-":
+                    for trip_ in array[2:]:
+                        bank.wait.remove(trip_)
+                    bank.save()
+                    context.appText("欸")
+                else:
+                    for trip_ in array[1:]:
+                        bank.register(trip_)
+                    context.appText("耶")
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
@@ -796,6 +812,25 @@ class Awaya:
                     context.appText(f"/me @{sender} shoots @{to} through the {through}!", "part")
                 else:
                     context.appText(f"/me @{sender} shoots @{to}, but missed!", "part")
+            
+            elif command == "sign":
+                if not trip:
+                    context.appText("你还没有识别码!")
+                else:
+                    context.appText(bank.sign(trip))
+            elif command == "bank":
+                if not trip:
+                    context.appText("你还没有识别码!")
+                else:
+                    money = bank.get(trip)
+                    context.appText(f"当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']}**阿瓦豆。")
+            elif command == "rank":
+                context.appText(bank.rank())
+            elif command == "regst":
+                if trip:
+                    context.appText(bank.request(trip))
+                else:
+                    context.appText("你还没有识别码!")
         elif namePure(msg) == self.nick:
             if icb9 > 990:
                 context.appText(random.choice(replys[1]).replace("sender", sender))
@@ -822,16 +857,17 @@ class Awaya:
                 try:
                     beR = int(sakura[0])
                 except:
-                    context.appText(str(random.randint(1, 1000)))
+                    akashi = random.randint(1, 1000)
                 else:
                     try:
                         r2 = int(sakura[1])
                     except:
                         r2 = 1
                     if beR > r2:
-                        context.appText(str(random.randint(r2, beR)))
+                        akashi = random.randint(r2, beR)
                     else:
-                        context.appText(str(random.randint(beR, r2)))
+                        akashi = random.randint(r2, beR)
+                context.appText(loliNum(akashi))
             elif command == "rollen":
                 digit = msg[7:25]
                 try: context.appText(rollTo1(int(digit)))
@@ -852,7 +888,7 @@ class Awaya:
         elif msg.startswith("cc ") and type_ != "whisper":
             context.appText(chess.main(sender, msg[3:]).strip())
         elif msg.startswith("p ") and type_ != "whisper":
-            poker.main(context, sender, msg[2:].replace("。", ".").strip())
+            poker.main(context, sender, msg[2:].replace("。", ".").strip(), trip)
         elif msg.startswith("t ") and type_ != "whisper":
             context.appText(truth.main(msg[2:]).strip())
         elif msg.startswith("u ") and type_ != "whisper":
@@ -863,6 +899,8 @@ class Awaya:
             countryKill.main(context, sender, msg[2:].replace("。", ".").strip())
         elif msg.startswith("g ") and type_ != "whisper":
             dryEye.main(context, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("oe ") and type_ != "whisper":
+            oddEven.main(context, sender, msg[3:], trip)
 
         # 古老的梗
         elif namePure(msg) == sender:

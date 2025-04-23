@@ -1,4 +1,5 @@
 import random
+from static import loliNum
 
 ## [0真心话开关, 1{昵称：摇出的数字}, 2[玩游戏中的hash]]
 truthList = [False, {}, []]
@@ -22,7 +23,7 @@ TRUTHMENU = "\n".join([
 def truthDo(sender, hashCode)->str:
     ranNum = random.randint(1, 1000)
     if not truthList[0]:
-        return str(ranNum)
+        return loliNum(ranNum)
     elif sender in truthList[1]:
         return f"{sender}已经摇出{truthList[1][sender]}了(ﾉ\"◑ڡ◑)ﾉ"
     elif hashCode in truthList[2]:
@@ -30,7 +31,7 @@ def truthDo(sender, hashCode)->str:
     else:
         truthList[1][sender] = ranNum
         truthList[2].append(hashCode)
-        return str(ranNum)
+        return loliNum(ranNum)
 
 def main(msg)->str:
     if msg == "开始":

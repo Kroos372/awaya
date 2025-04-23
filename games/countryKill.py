@@ -21,7 +21,7 @@ KILLRULE = "\n".join([
     "行牌规则：",
     "s <牌的序号> <参数>, 如==s 1 @Krs_==, ==s 4 Krs_ awa_ya==。以下是注意事项：",
     "进入濒死状态会自动出手上的桃/酒(没有求桃)",
-    "不出牌或无法出牌发送=s .==, 进行选择发送==s <序号>==",
+    "不出牌或无法出牌发送==s .== 进行选择发送==s <序号>==",
     "弃牌阶段发送==s . <序号1> <序号2>==等",
     "使用==s help <牌名>==查看卡牌描述与部分特殊效果的出法",
     "==s check==查看自己当前的牌与序号, ==s all==查看所有人的装备牌与序号",
@@ -162,7 +162,7 @@ USAGE = {
     "火杀": "带有火焰伤害的【杀】。",
     "雷杀": "带有雷电伤害的【杀】。",
     "闪": "闪避对你使用的【杀】。",
-    "酒": "酒杀使用==s <杀的序号> <酒的序号> <参数>==",
+    "酒": "与【杀】搭配+1点伤害。濒死时回复1点体力。\n酒杀使用==s <杀的序号> <酒的序号> <参数>==",
     "桃": "出牌阶段，对你使用。使你回复1点体力。",
     
     "桃园结义": "出牌阶段，对所有角色使用。每名目标角色回复1点体力。",
@@ -331,14 +331,11 @@ class Player:
         if self.isEquipped("青缸剑"):
             text += f"【青缸剑】：{self.name}无视了防具\n"
         else:
-            if card.name == "杀" and self.isEquipped("朱雀羽扇"):
-                text += f"【朱雀羽扇】：【杀】被当做【火杀】使用\n"
-                card = Card("火杀", card.suit, fake=True)
             if self.isEquipped("雌雄双股剑") and self.gender != targetObj.gender and not countryKill[3]["kill"]["weaponed"]:
                 weaponEff("雌雄双股剑", target)
                 text += f"【雌雄双股剑】：{target}与你性别不同，{target}可以在以下选项中选择一项:\n"
                 text += f"1\\. 弃置一张牌 2. 令{self.name}摸一张牌\n(s 1 <序号>/s 2)"
-            if targetObj.isEquipped("仁王盾") and card.suit in BLACK:
+            elif targetObj.isEquipped("仁王盾") and card.suit in BLACK:
                 dodgeList.remove(targetObj.name)
                 return f"被{target}的【仁王盾】抵消了。\n"
             elif targetObj.isEquipped("藤甲") and not countryKill[3].get("liquor"):
@@ -362,7 +359,6 @@ class Player:
         card2Obj = killObj.get("liquor")
         if card2Obj and card2Obj.name == "酒":
             self.cards.remove(card2Obj)
-            text += "【酒】洒在了刀上，伤害+1\n"
             damage = 2
             del killObj["liquor"]
         else:
@@ -462,7 +458,7 @@ class Player:
     def formatHand(self) -> str:
         self.cards.sweep()
         if self.cards:
-            self.cards.sort(key=lambda x: x.name)
+            self.cards.sort()
             return formatTable(self.cards)
         else:
             return "当前无手牌！"
@@ -582,6 +578,8 @@ class Card:
             return self.horse
         else:
             return super().__getitem__(key)
+    def __lt__(self, other: "Card"):
+        return self.name < other.name
 # 玩家手牌类
 class PlayerCards(list):
     def pop(self, index=-1):
@@ -658,6 +656,10 @@ def checkKill(playerObj: "Player", cardObj: "Card") -> str:
         if not countryKill[3]["wait"] and target in dodgeObj:
             countryKill[3]["wait"] = True
             countryKill[3]["cmd"] = "杀"
+            card2Obj = countryKill[3]["kill"].get("liquor")
+            if card2Obj and card2Obj.name == "酒":
+                playerObj.cards.remove(card2Obj)
+                text += "【酒】洒在了刀上，伤害+1\n"
             text += f"@{target} 请使用【闪】"
         if not (countryKill[3]["kill"]["lent"] or playerObj.isEquipped("诸葛连弩")) and countryKill[3]["legal"]:
             countryKill[3]["kill"]["killed"] = True
@@ -696,7 +698,7 @@ def formatTable(cards) -> str:
         hands[3] += f"【{v.readName}】|"
     return "\n".join(hands)
 # 杀复用
-def killFunc(senderObj, cardObj, array) -> str:
+def killFunc(senderObj: "Player", cardObj: "Card", array: list) -> str:
     turn = countryKill[3]
     killObj = turn["kill"]
     text = ""
@@ -724,6 +726,9 @@ def killFunc(senderObj, cardObj, array) -> str:
         elif senderObj.name in array:
             text += illegal("不可以伤害自己...\n")
         else:
+            if cardObj.name == "杀" and senderObj.isEquipped("朱雀羽扇"):
+                text += f"【朱雀羽扇】：【杀】被当做【火杀】使用\n"
+                cardObj = Card("火杀", cardObj.suit, fake=True)
             turn["targets"] = array
             killObj["card"] = cardObj
     return text
@@ -800,7 +805,7 @@ def deal(context):
         cards = []
         for j in range(4):
             cards.append(cardList.pop())
-        cards.sort(key=lambda x: x.name)
+        cards.sort()
         gender = random.choice("男女") # 幽默
         power = random.choice("魏蜀吴群")
         countryKill[2][i] = Player(i, gender, 4, cards, power)
@@ -1028,7 +1033,6 @@ def play(context, sender, msg):
                         turn["wait"] = False
                 elif turnCmd == "寒冰剑":
                     if command == ".":
-                        targets.pop()
                         text += f"{sender}不选择。【杀】依旧生效\n"
                         turn["wait"] = False
                         text += senderObj.kill(targetObj.name, turn["kill"]["card"])

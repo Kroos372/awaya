@@ -11,5 +11,9 @@
   "lastSaw": {},
   "subscribe": {},
   "protect": {},
-  "keys": {}
+  "keys": {},
+  "money": {
+    "wait": [],
+    "bank": {}
+  }
 }

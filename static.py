@@ -2,6 +2,9 @@
 # 进源码啥都别说，先一起喊： 阿瓦！
 import json, time, math, re, websocket, requests, threading, traceback, sys, os, random, datetime
 
+WSADD = "wss://hack.chat/chat-ws"
+# WSADD = "ws://localhost:8765"
+
 # 独立于类的函数
 ## 处理BOM字符
 def dec(cont: str) -> str:
@@ -46,11 +49,11 @@ def rollTo1(maxNum: int=1000) -> str:
 ## 离谱青云客
 def chatApi(msg) -> str:
     try:
-        cont = requests.get(f"http://api.qingyunke.com/api.php?key=free&msg={msg}", timeout=10)
+        cont = requests.get(f"http://api.qingyunke.com/api.php?key=free&msg={msg}", timeout=10).json()
     except:
         return "寄了"
     else:
-        cache = cont.json()["content"].replace("菲菲", NAME).replace("{br}", "\n")
+        cache = cont["content"].replace("菲菲", NAME).replace("{br}", "\n")
         return cache.replace("help", f"==@{NAME} help==，==菜单==或==@{NAME} 帮助==")
 ## 自定义回复
 def reply(sender: str, msg: str, api: bool=True) -> str:
@@ -196,6 +199,9 @@ def getPrime(i, factors) -> list:
 def updateCount():
     msgCount[sysList[3]] += 1
     writeJson("msgCount.json", msgCount)
+## 可爱计数
+def loliNum(num: int) -> str:
+    return f"![{num}](https://count.getloli.com/@:name?num={num}&padding=1)\n{num}"
 
 # 玩类玩的
 ## 仿rate-limiter
@@ -235,10 +241,11 @@ class Context:
 
         self.returns = False
         self.remake = False
-
+        
         self.chat = []
         self.whisper = {}
         self.part = []
+
     def addWhisper(self, to, text):
         if to not in self.whisper:
             self.whisper[to] = []
@@ -247,6 +254,7 @@ class Context:
         """chat: 公屏, whisper: 私信, part: 强制独立(命令、custom等)"""
         if not text:
             return
+
         type_ = type_ or self.type_
         if type_ == "chat":
             self.chat.append(text)
@@ -689,6 +697,67 @@ class Hasher:
             l[i] = f"{i+1}\\. "+l[i]
         result = "\n".join(l) or "没有这个名字！"
         return result if len(result) < 666 else toWeb(result)
+## 金钱系统
+class Bank:
+    def __init__(self, bank):
+        self.bank: dict[str, dict] = bank["bank"]
+        self.wait: list = bank["wait"]
+    def get(self, trip: str):
+        if trip not in self.bank:
+            return False
+        else:
+            return self.bank[trip]
+    def register(self, trip):
+        if trip in self.wait:
+            self.bank[trip] = {
+                "money": 0,
+                "sign": 0,
+                "remain": 0,
+                "lastSign": None
+            }
+            self.wait.remove(trip)
+            self.save()
+    def request(self, trip) -> str:
+        if trip in self.bank:
+            return "你已经有银行了！"
+        else:
+            self.wait.append(trip)
+    def sign(self, trip: str) -> str:
+        money = self.get(trip)
+        if not money:
+            return f"你还没有银行！使用=={PREFIX}regst==注册一个！"
+        if money["lastSign"] == nowDay():
+            return "你今天已经签到过了！"
+        else:
+            addMoney = random.randint(900, 1100) + (1 * money["sign"]) + (77 * money["remain"])
+            money["money"] += addMoney
+            money["sign"] += 1
+            money["remain"] += 1
+            money["lastSign"] = nowDay()
+            self.save()
+            return f"签到成功，获得{addMoney}阿瓦豆。\n当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']}**阿瓦豆。"
+    def delete(self, trip: str, num: int) -> int:
+        money = self.get(trip)
+        money["money"] -= self.hasMoney(trip, num)
+        self.save()
+        return num
+    def add(self, trip: str, num: int):
+        money = self.get(trip)
+        money["money"] += num
+        self.save()
+    def hasMoney(self, trip: str, num: int) -> int:
+        money = self.get(trip)
+        return money["money"] >= num and num or money["money"]
+    def rank(self) -> str:
+        sort = sorted(((trip, v["money"]) for trip, v in self.bank.items()), key=lambda x: x[1], reverse=True)[:25]
+        result = ["### 排行"]
+        rank = 1
+        for trip, num in sort:
+            result.append(f"{rank}\\. {trip}：{num}")
+            rank += 1
+        return "\n".join(result)
+    def save(self):
+        writeJson("userData.json", userData)
 
 # 读取文件们
 with open("files/info.json", encoding="utf8") as f:
@@ -703,10 +772,8 @@ with open("files/answer.json", encoding="utf8") as f:
     answer = json.loads(dec(f.read()))
 with open("files/msgCount.json", encoding="utf8") as f:
     msgCount = json.loads(dec(f.read()))
-# 常量
-WSADD = "wss://hack.chat/chat-ws"
-# WSADD = "ws://localhost:8765"
 
+# 常量
 PREFIX, WHTFIX, OWNFIX, EHHH = ";", "0", ".", "&zwj;"
 KICK, AUTH, MOD = "/w mbot kick", info["auth"], info["mod"]
 URL, TOKEN = info["url"], info["token"]
@@ -720,11 +787,13 @@ MENUMIN = "\n".join([
     "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot",
     "无前缀:",
     "r, rollen, rprime, time, 游戏",
+    "阿瓦豆:",
+    "regst, sign, bank, rank",
     "",
     "白名单用户：",
     f">前缀=={WHTFIX}==:",
     "addb, delb, igno, unig, bans, uban, kill, unwe, encap, decap, lock, unlock, gnkey, " + 
-    "setrl, addw, delw, list, room",
+    "setrl, addw, delw, list, room, fun, regst",
     "",
     f"发送=={PREFIX}help 命令==可获得该指令详细用法，如=={PREFIX}help help==",
     f"白名单用{WHTFIX}help",
@@ -865,6 +934,35 @@ COMMANDS = {
         "|描述: 涩图怎么又回来了，你们谁有头绪|",
         f"|例: {PREFIX}setu tag=阿瓦|",
         "|注: 来自[点我](https://api.lolicon.app/#/setu), 参数详情自己看。有rl(我加的)。|"
+    ]),
+
+    "regst": "\n".join([
+        "# REGiSTer Bank:",
+        "||",
+        "|:-:|",
+        "|参数: 无|",
+        "|描述: 发起一个注册银行的请求|",
+    ]),
+    "sign": "\n".join([
+        "# SIGN:",
+        "||",
+        "|:-:|",
+        "|参数: 无|",
+        "|描述: 签到，随机获得阿瓦豆(签到时间越长越多) |",
+    ]),
+    "bank": "\n".join([
+        "# BANK:",
+        "||",
+        "|:-:|",
+        "|参数: 无|",
+        "|描述: 查看自己的银行|",
+    ]),
+    "rank": "\n".join([
+        "# RANKing List:",
+        "||",
+        "|:-:|",
+        "|参数: 无|",
+        "|描述: 查看排行榜|",
     ]),
 
     "r": "\n".join([
@@ -1075,6 +1173,23 @@ WTCOMMANDS = {
         "|例: rcolor|",
         "|注: 最好别用|"
     ]),
+    "fun": "\n".join([
+        "# FUN:",
+        "||",
+        "|:-:|",
+        "|参数: <数字>|",
+        "|描述: 设置随机发言概率((1000 - 数字)/1000)|",
+        f"|例: {WHTFIX}fun 990|",
+    ]),
+    "regst": "\n".join([
+        "# FUN:",
+        "||",
+        "|:-:|",
+        "|参数: ?- ?<trip>|",
+        "|描述: 同意银行注册请求，若第一个参数为`-`则为拒绝。|",
+        "|注: 不加参数为查看请求，all为参数则同意所有请求。|",
+        f"|例: {WHTFIX}regst - coBad2 YaAwA7|",
+    ]),
 
     "decp": "\n".join([
         "# D?able CaPtcha:",
@@ -1166,11 +1281,13 @@ ignore = Black("ignore")
 banned = Black("banned")
 hasher = Hasher(data)
 
+bank = Bank(userData["money"])
+
 lineReply = {
     # 纪念零姬……
     "0.0": ["0.0.0", ".0.", ";0;"],
     "游戏": ["\n".join([
-        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g)",
+        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g), 猜单双(oe)",
         "发送`<前缀> help`获取对应帮助"
     ])],
 
