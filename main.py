@@ -1,7 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, countryKill, poker, truth, uno, dryEye, oddEven
+from games import bomber, chess, countryKill, poker, truth, uno, dryEye, oddEven, stock
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -563,11 +563,11 @@ class Awaya:
                     if len(kilo) == 2:
                         try: del answer[kilo[1]]
                         except: context.appText(f"此问题还未设置答案，请重新确认后再次再试！", "whisper")
-                        else: context.appText(f"已成功删除“{kilo[1]}”的所有回答！", "whisper")
+                        else: context.appText(f"已成功删除"{kilo[1]}"的所有回答！", "whisper")
                     else:
                         try: ans = answer[kilo[1]].pop(int(kilo[2]))
                         except: context.appText(f"此问题还未设置答案或序号错误，请重新确认后再次再试！", "whisper")
-                        else: context.appText(f"已成功删除回答：“{ans}”！", "whisper")
+                        else: context.appText(f"已成功删除回答："{ans}"！", "whisper")
                     writeJson("answer.json", answer)
             elif command == "relo":
                 ind = msg[6:]
@@ -755,20 +755,20 @@ class Awaya:
                 lori = msg[6:7]
                 if lori in ["l", "I", "1", "|", "丨"]:
                     if lori == "l":
-                        context.appText(f"您输入的“{lori}”是字母表的第十二个字母, “L”的小写。")
+                        context.appText(f"您输入的"{lori}"是字母表的第十二个字母, "L"的小写。")
                     elif lori == "I":
-                        context.appText(f"您输入的“{lori}”是字母表的第九个字母, “i”的大写。")
+                        context.appText(f"您输入的"{lori}"是字母表的第九个字母, "i"的大写。")
                     elif lori == "1":
-                        context.appText(f"您输入的“{lori}”是最小的正整数, 3-2的结果。")
+                        context.appText(f"您输入的"{lori}"是最小的正整数, 3-2的结果。")
                     elif lori == "|":
-                        context.appText(f"您输入的“{lori}”是我喜欢你, 按住Shift+\\\\可以打出。")
+                        context.appText(f"您输入的"{lori}"是我喜欢你, 按住Shift+\\\\可以打出。")
                     elif lori == "丨":
-                        context.appText(f"您输入的“{lori}”是一个汉字, 一般地, 读作gun3。")
+                        context.appText(f"您输入的"{lori}"是一个汉字, 一般地, 读作gun3。")
                 elif lori in ["0", "O"]:
                     if lori == "0":
-                        context.appText(f"您输入的“{lori}”是最小的自然数, 1-1的结果。")
+                        context.appText(f"您输入的"{lori}"是最小的自然数, 1-1的结果。")
                     elif lori == "O":
-                        context.appText(f"您输入的“{lori}”是字母表的第十五个字母, “o”的大写。")
+                        context.appText(f"您输入的"{lori}"是字母表的第十五个字母, "o"的大写。")
                 else:
                     context.appText("不知道您大人想干嘛呢")
             elif command == "decp":
@@ -901,6 +901,8 @@ class Awaya:
             dryEye.main(context, sender, msg[2:].replace("。", ".").strip())
         elif msg.startswith("oe ") and type_ != "whisper":
             oddEven.main(context, sender, msg[3:], trip)
+        elif msg.startswith("st ") and type_ != "whisper":
+            stock.main(context, sender, msg[3:], trip)
 
         # 古老的梗
         elif namePure(msg) == sender:
