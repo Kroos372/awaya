@@ -1,3 +1,4 @@
+# code by Blaze
 from static import random, Context
 
 UNOMENU = "\n".join([
