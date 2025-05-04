@@ -60,3 +60,5 @@ def main(msg)->str:
             return fin
     elif msg == "help":
         return MENU
+    else:
+        return ""

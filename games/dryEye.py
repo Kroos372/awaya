@@ -1,3 +1,4 @@
+# code by sora
 import random, re
 
 cardsRank = {1: "0",2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7",
@@ -52,9 +53,9 @@ class DryEye:
         self.checkPass = 0 #检查这轮是否需要结束
 
         self.multipleTurn = {
-            "self.players": [],  # 倍数轮的两个玩家
-            "self.multiple": 1,  # 当前倍数
-            "self.base": 5      # 基数
+            "players": [],  # 倍数轮的两个玩家
+            "multiple": 1,  # 当前倍数
+            "base": 5      # 基数
         }
 
         self.roundCount = 0  # 当前大轮次数
@@ -99,8 +100,8 @@ class DryEye:
                 cards_info += cardsRank[rank] + " "
 
         money_info = f"\n你现在还剩{self.playerMoney[player]}块钱，"
-        if self.multipleTurn["self.players"] and player in self.multipleTurn["self.players"]:
-            other_player = self.multipleTurn["self.players"][0] if self.multipleTurn["self.players"][1] == player else self.multipleTurn["self.players"][1]
+        if self.multipleTurn["players"] and player in self.multipleTurn["players"]:
+            other_player = self.multipleTurn["players"][0] if self.multipleTurn["players"][1] == player else self.multipleTurn["players"][1]
             money_info += f"正在和{self.poker[other_player][0]}的{self.multipleTurn['multiple']}倍数对决中！"
         else:
             money_info += "暂时没有进入倍数轮。"
@@ -109,20 +110,20 @@ class DryEye:
     #mM->multiplicative Multiplication
     def updateMultipleTurn(self, player1, player2, mM):
         """更新倍数轮状态"""
-        if not self.multipleTurn["self.players"]:
-            self.multipleTurn["self.players"] = [player1, player2]
+        if not self.multipleTurn["players"]:
+            self.multipleTurn["players"] = [player1, player2]
         self.multipleTurn["multiple"] *= mM
         self.context.appText(f"\\*(੭*ˊᵕˋ)੭\\*ଘ，{self.poker[player1][0]}与{self.poker[player2][0]}间的倍数已累至{self.multipleTurn['multiple']}倍！")
 
     def endMultipleTurn(self, winner):
         #结束倍数轮，进行结算
-        if not self.multipleTurn["self.players"]:
+        if not self.multipleTurn["players"]:
             return
 
-        if self.multipleTurn["self.players"][0] == winner:
-            loser = self.multipleTurn["self.players"][1]
+        if self.multipleTurn["players"][0] == winner:
+            loser = self.multipleTurn["players"][1]
         else:
-            loser = self.multipleTurn["self.players"][0]
+            loser = self.multipleTurn["players"][0]
         amount = self.multipleTurn["multiple"] * self.multipleTurn["base"]
         
         self.playerMoney[winner] += amount
@@ -130,7 +131,7 @@ class DryEye:
         
         self.context.appText(f"该倍数轮结束！{self.poker[winner][0]}赢得了{amount}块钱，{self.poker[loser][0]}失去了{amount}块钱！")
         # 重置倍数轮
-        self.multipleTurn["self.players"] = []
+        self.multipleTurn["players"] = []
         self.multipleTurn["multiple"] = 1
 
     def calculateTribute(self, player_cards):
@@ -146,7 +147,7 @@ class DryEye:
         self.roundCount += 1
         self.checkPass = 0
         # 结算倍数轮
-        if self.multipleTurn["self.players"]:
+        if self.multipleTurn["players"]:
             self.endMultipleTurn(self.upPlayer)
         # 重置出牌记录
         self.upCards = ""
@@ -284,7 +285,7 @@ class DryEye:
             # 检查是否出完所有牌
             if sum(self.poker[player][1][1:15]) == 0:
                 self.context.appText(f"玩家{player_name}出完了所有的牌！")
-                if self.multipleTurn["self.players"]:
+                if self.multipleTurn["players"]:
                     self.endMultipleTurn(player)  # 结束倍数轮
                 self.handleGameEnd(player)
                 return True
@@ -513,7 +514,7 @@ class DryEye:
                     initial_multiple *= 2 # 冒头炸初始倍数翻倍
 
             if not self.upCardsKind == "空" and self.upPlayer != 0 and self.upPlayer != player:
-                if self.multipleTurn["self.players"] and player not in self.multipleTurn["self.players"]:
+                if self.multipleTurn["players"] and player not in self.multipleTurn["players"]:
                     self.endMultipleTurn(self.upPlayer)  # 结束倍数轮
                 self.updateMultipleTurn(player, self.upPlayer, initial_multiple)  # 更新倍数轮
             self.upPlayer = player

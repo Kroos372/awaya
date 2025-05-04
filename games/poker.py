@@ -56,6 +56,7 @@ class AutoBot:
         self.cards = []
         self.landlord = False # 原来是这个词
         self.isbot = True
+        self.nakedCards = False
 
     def getCardType(self) -> dict:
         setCards = set(self.cards)
@@ -234,7 +235,7 @@ class AutoBot:
                                 text = f"{SORT[start]}-{SORT[rend]}*{times} {withs}"
                 
                 
-                if not text:
+                if not (text or isFriend):
                     kodan = random.random()
                     if types[4] and kodan < 0.2 and not re.match(r"^.\*4$", last):
                         text = f"{types[4].pop(0)}*4"
@@ -270,7 +271,8 @@ class Poker:
             else:
                 result.append(f"{player.name}：{len(player.cards)}张")
         return "\n".join(result)
-    def landonwer(self, owner: str): 
+    def landonwer(self, owner: str):
+        self.mults = self.mults or 1 
         senderObj: Player | AutoBot = self.playerObjs[owner]
         self.landlord = owner
         self.status = 2
@@ -286,7 +288,6 @@ class Poker:
     def passLand(self):
         self.playerIndex = (self.playerIndex+1) % 3
         if self.playerIndex == self.firstPlayer:
-            self.mults = 1
             self.landonwer(self.players[self.playerIndex])
     def start(self):
         # 开始
@@ -309,7 +310,7 @@ class Poker:
         self.firstPlayer = self.playerIndex
         self.context.appText(f"好的，发牌完成，随机到@{own} 拥有地主牌{random.choice(self.playerObjs[own].cards)}，请发送`p <分数>`叫地主或`p .`选择不叫。")
         if self.playerObjs[own].isbot:
-            self.play(own, "0")
+            self.play(own, ".")
     def play(self, sender: str, msg: str):
         msg = msg.upper()
         senderObj: Player | AutoBot = self.playerObjs[sender]
@@ -523,7 +524,7 @@ class Poker:
                     elif re.match(r"^[2-9AHJQK]\*4$", msg) and last != "王炸":
                         if senderCards.count(msg[0])<4: return self.context.appText("牌数不足！")
                         else:
-                            if re.match(r"^.*4$", last) and SORT.index(int(last[0])) >= SORT.index(int(msg[0])):
+                            if re.match(r"^.\*4$", last) and SORT.index(last[0]) >= SORT.index(msg[0]):
                                 return self.context.appText(f"你的牌没有{last}大!")
                             for _ in range(4): senderCards.remove(msg[0])
                             mults = 2
@@ -561,23 +562,21 @@ class Poker:
 
                     if self.spring:
                         self.mults *= 2
-                        self.context.appText("春天！倍数翻倍！")
+                        self.context.appText("春天！！！！！！！！！！！！倍数翻倍！🍾🍾🍾")
                     elif self.gnirps:
                         self.mults *= 2
-                        self.context.appText("反春天！倍数翻倍！")
+                        self.context.appText("反春天！！！！！！！！！！！！！！倍数翻倍！🍾🍾🍾")
                     
                     baseMoney = self.basePoint * self.mults
                     if not self.moneyless:
                         if senderObj.landlord:
                             for nick in self.players:
-                                thisMoney = bank.delete(self.playerObjs[nick].trip, baseMoney)
-                                bank.add(senderObj.trip, thisMoney)
-                                self.context.appText(f"{nick}输给了{sender} **{thisMoney}**阿瓦豆。")
+                                bank.give(self.playerObjs[nick].trip, senderObj.trip, baseMoney)
+                                self.context.appText(f"{nick}输给了{sender} **{baseMoney}**阿瓦豆。")
                         else:
-                            thisMoney = bank.delete(self.playerObjs[self.landlord].trip, baseMoney * 2)
                             for nick in self.players:
-                                bank.add(self.playerObjs[nick].trip, thisMoney / 2)
-                                self.context.appText(f"{self.landlord}输给了{nick} **{thisMoney}**阿瓦豆。")
+                                bank.give(self.playerObjs[self.landlord].trip, self.playerObjs[nick].trip, baseMoney)
+                                self.context.appText(f"{self.landlord}输给了{nick} **{baseMoney}**阿瓦豆。")
                     else:
                         self.context.appText(f"共计{self.mults}倍。")
                     
@@ -594,7 +593,8 @@ class Poker:
             # self.context.appText(f"{nextObj.name} 出了 {botCard}".replace("*", "\\*"))
             self.play(nextObj.name, botCard)
 
-def main(context: Context, sender: str, msg: str, trip: str="", bot: bool=False):
+def main(context: Context, sender: str, msg: str, bot: bool=False):
+    trip = context.user["trip"]
     poker.context = context
     if msg == "规则":
         context.appText(POKERRULE)
@@ -607,7 +607,7 @@ def main(context: Context, sender: str, msg: str, trip: str="", bot: bool=False)
         context.appText(f"地主是{poker.landlord}, 上家出的牌是：{poker.lastCard}\n以下是您的牌：{poker.playerObjs[sender].formatCards()}", "whisper")
     elif msg == "all" and (sender in poker.players) and (poker.status == 3):
         context.appText(poker.allCards())
-    elif poker.status and sender == poker.players[poker.playerIndex]:
+    elif poker.status and sender == poker.players[poker.playerIndex] and msg:
         poker.play(sender, msg)
     elif msg == "加入":
         if poker.status:
@@ -615,9 +615,9 @@ def main(context: Context, sender: str, msg: str, trip: str="", bot: bool=False)
         elif sender in poker.playerObjs:
             context.appText("你已经加入过了，再找些人吧ヾ|≧_≦|〃")
         else:
-            if bot or not trip:
+            if bot or not bank.get(trip):
                 poker.moneyless.append(sender)
-                context.appText("(有bot或无识别码玩家加入，本局将不算钱)")
+                context.appText("(有bot或无银行玩家加入，本局将不算钱)")
             if bot:
                 poker.playerObjs[sender] = AutoBot(sender)
             else:

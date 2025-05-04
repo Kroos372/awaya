@@ -13,7 +13,7 @@
   "protect": {},
   "keys": {},
   "money": {
-    "wait": [],
+    "wait": {},
     "bank": {}
   }
 }

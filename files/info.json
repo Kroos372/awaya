@@ -4,15 +4,17 @@
   "channel": "lounge",
   "color": "f1ad9d",
 
-  "owner": ["coBad2", "9kQGU6", "aAIT/y", "r2SKbu"],
+  "owner": ["coBad2", "9kQGU6", "aAIT/y", "r2SKbu", "66VckO"],
   "name": "阿瓦娅",
 
   "prologue": [
     "早上好。发送 菜单 以获取帮助。"
   ],
   "auth": "",
-  "mod": "",
-  "token": "",
+  "mod": "NOWAOREJYANAI_KONOSEKAIDA",
+
+  "url": "https://aberia.pythonanywhere.com/awaya/",
+  "token": "ILoveBroken_AndAwaya",
 
   "debug": false
 }
