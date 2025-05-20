@@ -1,5 +1,6 @@
 import random, re
-from static import bank, Context
+from static import Awaish
+from money import bank
 
 CARDS = ["3", "4", "5", "6", "7", "8", "9", "H", "J", "Q", "K", "A", "2"]
 JOKERS = ["小", "大"]
@@ -245,7 +246,7 @@ class AutoBot:
 
 class Poker:
     def __init__(self):
-        self.context: Context = None
+        self.context: Awaish = None
         self.initPoker()
     def initPoker(self):
         self.status = 0
@@ -253,7 +254,7 @@ class Poker:
         self.players: list[str] = []
         self.cards = PINIT[:]
         self.landlord = ""
-        self.basePoint = random.randint(20, 60)
+        self.basePoint = random.randint(33, 77)
         self.mults = 0
         self.moneyless = []
         
@@ -364,8 +365,8 @@ class Poker:
                     # 单张
                     if msg in SORT and msg in senderCards:
                         senderCards.remove(msg)
-                    # 对子或三张或四张
-                    elif re.match(r"^[2-9AHJQK]\*[234]$", msg):
+                    # 对子或三张
+                    elif re.match(r"^[2-9AHJQK]\*[23]$", msg):
                         if senderCards.count(msg[0])>=int(msg[-1]):
                             for _ in range(int(msg[-1])): senderCards.remove(msg[0])
                         else: return self.context.appText("牌数不足！")
@@ -402,7 +403,7 @@ class Poker:
                                 for _ in range(mult): senderCards.remove(i)
                         else: return self.context.appText("牌数不够，三顺最少两个，双顺最少三个;")
                     # 四带二
-                    elif re.match(r"([2-9AHJQK])\*4 (?!.*?\1)(?:([2-9AHJQK])\2 ([2-9AHJQK])\3|[2-9AHJQK大小] [2-9AHJQK大小])$", msg):
+                    elif re.match(r"^([2-9AHJQK])\*4 (?!.*?\1)(?:([2-9AHJQK])\2 ([2-9AHJQK])\3|[2-9AHJQK大小] [2-9AHJQK大小])$", msg):
                         array = msg.split()[1:]
                         if senderCards.count(msg[0])==4 and sameLen(array) and senderCards.count(array[0][0])>=len(array[0][0]) and senderCards.count(array[1][0])>=len(array[1][0]):
                             for _ in range(4):
@@ -430,7 +431,7 @@ class Poker:
                             else: return self.context.appText("不符合规则！")
                     # 炸弹
                     elif re.match(r"^[2-9AHJQK]\*4$", msg):
-                        if senderCards.count(msg[0])<4:
+                        if senderCards.count(msg[0]) < 4:
                             return self.context.appText("牌数不足！")
                         for _ in range(4):
                             senderCards.remove(msg[0])
@@ -571,11 +572,11 @@ class Poker:
                     if not self.moneyless:
                         if senderObj.landlord:
                             for nick in self.players:
-                                bank.give(self.playerObjs[nick].trip, senderObj.trip, baseMoney)
+                                bank.give(self.playerObjs[nick].trip, senderObj.trip, baseMoney, True)
                                 self.context.appText(f"{nick}输给了{sender} **{baseMoney}**阿瓦豆。")
                         else:
                             for nick in self.players:
-                                bank.give(self.playerObjs[self.landlord].trip, self.playerObjs[nick].trip, baseMoney)
+                                bank.give(self.playerObjs[self.landlord].trip, self.playerObjs[nick].trip, baseMoney, True)
                                 self.context.appText(f"{self.landlord}输给了{nick} **{baseMoney}**阿瓦豆。")
                     else:
                         self.context.appText(f"共计{self.mults}倍。")
@@ -593,7 +594,7 @@ class Poker:
             # self.context.appText(f"{nextObj.name} 出了 {botCard}".replace("*", "\\*"))
             self.play(nextObj.name, botCard)
 
-def main(context: Context, sender: str, msg: str, bot: bool=False):
+def main(context: Awaish, sender: str, msg: str, bot: bool=False):
     trip = context.user["trip"]
     poker.context = context
     if msg == "规则":
@@ -603,9 +604,9 @@ def main(context: Context, sender: str, msg: str, bot: bool=False):
     elif msg == "结束" and sender in poker.players:
         poker.initPoker()
         context.appText("唔，结束了;;;;")
-    elif msg == "check" and (sender in poker.players) and (poker.status == 3):
+    elif msg == "check" and (sender in poker.players) and poker.status:
         context.appText(f"地主是{poker.landlord}, 上家出的牌是：{poker.lastCard}\n以下是您的牌：{poker.playerObjs[sender].formatCards()}", "whisper")
-    elif msg == "all" and (sender in poker.players) and (poker.status == 3):
+    elif msg == "all" and (sender in poker.players) and poker.status:
         context.appText(poker.allCards())
     elif poker.status and sender == poker.players[poker.playerIndex] and msg:
         poker.play(sender, msg)

@@ -1,7 +1,8 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, countryKill, poker, truth, uno, dryEye, oddEven, stock, zhaJinHua
+from games import bomber, chess, poker, truth, uno, dryEye, countryKill
+from money import bank, oddEven, zhaJinHua
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -122,6 +123,54 @@ class Awaya:
                 hourCount.initDay()
             msgCount["hour"] = {"count": 0, "users": []}
             hourCount.initHour()
+
+            self.sendMsg(bank.checkExpire())
+
+    def newContext(self, user: dict, type_: Literal["chat", "whisper"]):
+        self.user = user # 发送者的各项数据
+        self.type_ = type_ # chat/whisper
+
+        self.returns = False
+        self.remake = False
+        
+        self.chat = []
+        self.whispers: dict[str, list] = {}
+        self.part = []
+        self.history: list[dict] = []
+    def addWhisper(self, to, text):
+        if to not in self.whispers:
+            self.whispers[to] = []
+        self.whispers[to].append(text)
+    def appText(self, text: str, type_: str="", **kwargs):
+        if not text:
+            return
+
+        type_ = type_ or self.type_
+        if type_ == "chat":
+            self.chat.append(text)
+        elif type_ == "whisper":
+            to = kwargs.get("to") or self.user["nick"]
+            kwargs["to"] = to
+            self.addWhisper(to, text)
+        else:
+            self.part.append(dict({"text": text}, **kwargs))
+        self.history.append({"text": text, "type": type_, **kwargs})
+    def pop(self, num: int=1):
+        for _ in range(num):
+            operate = self.history.pop()
+            if operate["type"] == "chat":
+                self.chat.pop()
+            elif operate["type"] == "whisper":
+                self.whispers[operate["to"]].pop()
+            else:
+                self.part.pop()
+    def runContext(self):
+        self.sendMsg("\n".join(self.chat))
+        for to, text in self.whispers.items():
+            self.whisper(to, "\n".join(text))
+        for kws in self.part:
+            self.sendMsg(**kws)
+
     def sendMsg(self, text: str, cid: str="", force: bool=False):
         if cid:
             self._sendPacket({"cmd": "chat", "text": text, "customId": cid}, force)
@@ -228,36 +277,35 @@ class Awaya:
             broken.append(f"{user}{trip}, {self.users.getAttr(user, 'hash')}")
         return "\n".join(broken)
     # 发言与封禁词rl
-    def rl(self, sender: str, msg: str, score: int=0) -> str:
+    def rl(self, sender: str, msg: str, score: int=0):
         hash_ = self.users.getAttr(sender, "hash")
         if msgRl.frisk(hash_, 1+len(msg)/512 + score):
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
-            return self.kick(sender)
+            self.kick(sender)
         for word in banWords:
             if re.search(word, msg) and wordRl.frisk(hash_, 1):
                 wordRl.records[hash_]["score"] = wordRl.threshold / 2
-                return self.kick(sender)
-        return ""
+                self.kick(sender)
     # 踢
-    def kick(self, *nicks, assert_: bool=False):
+    def kick(self, *nicks, assert_: bool=False) -> bool:
         kkNicks = []
         for nick in nicks:
             if nick == self.nick or self.users.getAttr(nick, "trip") in whiteList:
                 if assert_:
-                    return None
+                    return False
                 else:
                     continue
             else:
                 self.blacktemp.append(nick)
                 kkNicks.append(nick)
         if kkNicks:
-            return KICK + " " + " ".join(kkNicks)
-        return ""
+            self.sendMsg(KICK + " " + " ".join(kkNicks), force=True)
+        return True
     ## 多线程updatemsg
     def updateFunc(self, func, cid, *args):
         threading.Thread(target=lambda: self.updateMsg("overwrite", func(*args), cid)).start()
 
-    def selfSelf(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
+    def selfSelf(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         # 日志, 添加look与seen
         if type_ != "whisper":
             self.log(f"{sender}：{msg}")
@@ -273,12 +321,12 @@ class Awaya:
             if sysList[8]:
                 sysList[8] = False
             else:
-                context.returns = True
-    def premade(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
+                self.returns = True
+    def premade(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         user = self.users.getUser(sender)
         if type_ != "whisper":
             # rl
-            context.appText(self.rl(sender, msg), "part", force=True)
+            self.rl(sender, msg)
             # 加peep
             if not ignore.check(**user):
                 self.peeper.push(sender, msg, kwargs.get("customId"), kwargs.get("userid"))
@@ -288,7 +336,8 @@ class Awaya:
                 sysList[9].append(msg)
         elif trip not in whiteList:
             # 私信rl更严
-            context.appText(self.rl(sender, msg, len(msg)/256 + 2), "part", force=True)
+            # self.rl(sender, msg, len(msg)/256 + 2)
+            self.rl(sender, msg)
         try:
             command = msg.split(" ")[0]
         except:
@@ -298,69 +347,69 @@ class Awaya:
             if command == "help":
                 cmd = msg[6:]
                 if not msg[5:]:
-                    context.appText(f"{MENUMIN}", "whisper")
+                    self.appText(f"{MENUMIN}", "whisper")
                 elif cmd in WTCOMMANDS:
-                    context.appText("我是占位符awa\n" + WTCOMMANDS[cmd], "whisper")
+                    self.appText("我是占位符awa\n" + WTCOMMANDS[cmd], "whisper")
                 elif cmd in COMMANDS:
-                    context.appText("我是占位符awa\n" + COMMANDS[cmd], "whisper")
+                    self.appText("我是占位符awa\n" + COMMANDS[cmd], "whisper")
                 else:
-                    context.appText(random.choice(ERRORMSG))
-            if command == "addb":
+                    self.appText(random.choice(ERRORMSG))
+            elif command == "addb":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    context.appText("缺少参数")
+                    self.appText("缺少参数")
                 elif len(bloods) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
-                        context.appText("参数错误")
+                        self.appText("参数错误")
                     else:
-                        context.appText(black.add("hash", hash_))
+                        self.appText(black.add("hash", hash_))
                 else:
-                    context.appText(black.add(bloods[1], namePure(bloods[2])))
+                    self.appText(black.add(bloods[1], namePure(bloods[2])))
             elif command == "delb":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    context.appText("缺少参数")
+                    self.appText("缺少参数")
                 elif len(bloods) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
-                        context.appText("参数错误")
+                        self.appText("参数错误")
                     else:
-                        context.appText(black.delete("hash", hash_))
+                        self.appText(black.delete("hash", hash_))
                 elif len(bloods) > 3:
                     for attr in bloods[2:]:
                         black.delete(bloods[1], namePure(attr))
-                    context.appText("阿瓦一下")
+                    self.appText("阿瓦一下")
                 else:
-                    context.appText(black.delete(bloods[1], namePure(bloods[2])))
-            if command == "igno":
+                    self.appText(black.delete(bloods[1], namePure(bloods[2])))
+            elif command == "igno":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    context.appText("缺少参数")
+                    self.appText("缺少参数")
                 elif len(bloods) < 3:
-                    context.appText(ignore.add("nick", namePure(msg[6:])))
+                    self.appText(ignore.add("nick", namePure(msg[6:])))
                 else:
-                    context.appText(ignore.add(bloods[1], namePure(bloods[2])))
+                    self.appText(ignore.add(bloods[1], namePure(bloods[2])))
             elif command == "unig":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    context.appText("缺少参数")
+                    self.appText("缺少参数")
                 elif len(bloods) < 3:
-                    context.appText(ignore.delete("nick", namePure(msg[6:])))
+                    self.appText(ignore.delete("nick", namePure(msg[6:])))
                 elif len(bloods) > 3:
                     for attr in bloods[2:]:
                         ignore.delete(bloods[1], namePure(attr))
-                    context.appText("阿瓦一下")
+                    self.appText("阿瓦一下")
                 else:
-                    context.appText(ignore.delete(bloods[1], namePure(bloods[2])))
+                    self.appText(ignore.delete(bloods[1], namePure(bloods[2])))
             elif command == "bans":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    return context.appText("缺少参数")
+                    return self.appText("缺少参数")
                 elif len(bloods) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
-                        return context.appText("参数错误")
+                        return self.appText("参数错误")
                     else:
                         bloods[1] = "hash"
                         bloods.append(hash_)
@@ -369,28 +418,27 @@ class Awaya:
                 if nicks:
                     assert_ = self.kick(*nicks, assert_=True)
                     if assert_:
-                        context.appText(banned.add(bloods[1], attr))
-                        context.appText(assert_, "part")
+                        self.appText(banned.add(bloods[1], attr))
                     else:
-                        context.appText("6")
+                        self.appText("6")
                 else:
-                    context.appText(banned.add(bloods[1], attr))
+                    self.appText(banned.add(bloods[1], attr))
             elif command == "uban":
                 bloods = msg.split()
                 if len(bloods) < 2:
-                    context.appText("缺少参数")
+                    self.appText("缺少参数")
                 elif len(bloods) < 3:
-                    context.appText(banned.delete("hash", msg[6:]))
+                    self.appText(banned.delete("hash", msg[6:]))
                 elif len(bloods) > 3:
                     for attr in bloods[2:]:
                         banned.delete(bloods[1], namePure(attr))
-                    context.appText("阿瓦一下")
+                    self.appText("阿瓦一下")
                 else:
-                    context.appText(banned.delete(bloods[1], namePure(bloods[2])))
+                    self.appText(banned.delete(bloods[1], namePure(bloods[2])))
             elif command == "repl":
                 _000 = msg.split()
                 if len(_000) < 3 or not _000[1]:
-                    context.appText(f"命令错误，请使用`{WHTFIX}repl 提问 回答`的格式(‾◡◝)")
+                    self.appText(f"命令错误，请使用`{WHTFIX}repl 提问 回答`的格式(‾◡◝)")
                 else:
                     ans = " ".join(_000[2:])
                     quest = textPure(_000[1])
@@ -398,15 +446,15 @@ class Awaya:
                         answer[quest] = [ans]
                     else:
                         answer[quest].append(ans)
-                    context.appText(f"添加成功(☆▽☆)")
-                    writeJson("answer.json", answer)
+                    self.appText(f"添加成功(☆▽☆)")
+                    writeJson("answer", answer)
             elif command == "kill":
-                context.appText(self.kick(*msg[6:].split()), "part")
+                self.kick(*msg[6:].split())
             elif command == "gnkey":
                 key = getStr()
                 keys[trip] = key
-                writeJson("userData.json", userData)
-                context.appText("\n".join([
+                writeJson("userData", userData)
+                self.appText("\n".join([
                     "占位awa",
                     f"`{key}`是您的新key，可用于在无识别码状态私信使用`{PREFIX}decp <key>`关闭验证码",
                     "请妥善保管，如遗失，可使用此识别码执行此命令重新生成"
@@ -414,19 +462,19 @@ class Awaya:
             elif command == "unwe":
                 trip = msg[6:12]
                 if trip not in welcome:
-                    context.appText("还没有设置欢迎语")
+                    self.appText("还没有设置欢迎语")
                 else:
                     del welcome[trip]
-                    writeJson("userData.json", userData)
-                    context.appText("删除欢迎语成功")
+                    writeJson("userData", userData)
+                    self.appText("删除欢迎语成功")
             elif command == "encap":
-                context.appText(".m enablecap", "part")
+                self.appText(".m enablecap", "part")
             elif command == "decap":
-                context.appText(".m disablecap", "part")
+                self.appText(".m disablecap", "part")
             elif command == "lock":
-                context.appText(".m lockroom", "part")
+                self.appText(".m lockroom", "part")
             elif command == "unlock":
-                context.appText(".m unlockroom", "part")
+                self.appText(".m unlockroom", "part")
             elif command == "setrl":
                 op = msg.split()
                 if op[-1] == "word":
@@ -442,41 +490,41 @@ class Awaya:
                     setRl.threshold = int(op[2])
                 except:
                     pass
-                context.appText(f"halflife: {setRl.halflife}, threshold: {setRl.threshold}")
+                self.appText(f"halflife: {setRl.halflife}, threshold: {setRl.threshold}")
             elif command == "addw":
                 word = msg[6:]
                 if word in banWords:
-                    context.appText("已经有这个封禁词了~")
+                    self.appText("已经有这个封禁词了~")
                 else:
                     banWords.append(word)
-                    writeJson("userData.json", userData)
-                    context.appText("好好好，又进去了一个。")
+                    writeJson("userData", userData)
+                    self.appText("好好好，又进去了一个。")
             elif command == "delw":
                 word = msg[6:]
                 if word not in banWords:
-                    context.appText("没有这个封禁词了~")
+                    self.appText("没有这个封禁词了~")
                 else:
                     banWords.remove(word)
-                    writeJson("userData.json", userData)
-                    context.appText("好好好，删除成功。")
+                    writeJson("userData", userData)
+                    self.appText("好好好，删除成功。")
             elif command == "list":
                 lChannel = msg[6:]
                 if not lChannel:
-                    context.appText("-_-#")
+                    self.appText("-_-#")
                 elif lChannel == self.channel:
-                    context.appText(self.listNow())
+                    self.appText(self.listNow())
                 elif type_ == "whisper":
-                    context.appText("暂不支持私信, 果咩捏")
+                    self.appText("暂不支持私信, 果咩捏")
                 else:
                     # List? kita kita~
                     cid = getStr(6)
-                    context.appText("桥豆麻袋", "part", cid=cid)
+                    self.appText("桥豆麻袋", "part", cid=cid)
                     kita = ListChat(lChannel, cid, self.passwd)
                     self.updateFunc(kita.rock, cid)
             elif command == "room":
                 lChannel = msg[6:] or self.channel
                 cid = getStr(6)
-                context.appText("桥豆麻袋", "part", cid=cid)
+                self.appText("桥豆麻袋", "part", cid=cid)
                 kita = RoomChat(lChannel, cid, self.nick)
                 self.updateFunc(kita.rock, cid)
             elif command == "bomb":
@@ -484,115 +532,116 @@ class Awaya:
                 try:
                     mini, maxi = int(sp[1]), int(sp[2])
                 except:
-                    return context.appText(f"输入格式有误，请在{WHTFIX}bomb 后面用空格隔开，输入最小值和最大值两个整数！")
+                    return self.appText(f"输入格式有误，请在{WHTFIX}bomb 后面用空格隔开，输入最小值和最大值两个整数！")
                 if (maxi-mini) < 1:
-                    context.appText("两数的差别过小，请重新设置！")
+                    self.appText("两数的差别过小，请重新设置！")
                 else:
                     bomber.bombs[3], bomber.bombs[4] = mini, maxi
-                    context.appText("设置成功！")        
+                    self.appText("设置成功！")        
             elif command == "fun":
                 try:
                     sysList[10] = int(msg.split()[1])
                 except (IndexError, TypeError):
-                    context.appText(f"参数有误，请输入数字")
+                    self.appText(f"参数有误，请输入数字")
                 else:
-                    context.appText("设置随机拟人概率成功！")
+                    self.appText("设置随机拟人概率成功！")
             elif command == "regst":
                 array = msg.split(" ")
                 if len(array) == 1:
                     hlg = []
                     for trip_, name in bank.wait.items():
                         hlg.append(f"{name}({trip_})")
-                    context.appText(" ".join(hlg) or "当前没有请求")
+                    self.appText(" ".join(hlg) or "当前没有请求")
                 elif array[1] == "all":
                     for trip_ in bank.wait.copy():
                         bank.register(trip_)
-                    context.appText("耶！！！")
+                    self.appText("耶！！！")
                 elif array[1] == "-all":
                     bank.wait.clear()
                     bank.save()
-                    context.appText("欸——")
+                    self.appText("欸——")
                 elif array[1] == "-":
                     for trip_ in array[2:]:
                         del bank.wait[trip_]
                     bank.save()
-                    context.appText("欸……")
+                    self.appText("欸……")
                 else:
                     for trip_ in array[1:]:
-                        bank.register(trip_)
-                    context.appText("耶！")
+                        if trip_ in bank.wait:
+                            bank.register(trip_)
+                    self.appText("耶！")
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
-                context.appText(OWNMENU, "whisper")
+                self.appText(OWNMENU, "whisper")
             elif command == "addw":
                 trip_ = msg[6:12]
                 if trip_ not in whiteList:
                     whiteList.append(trip_)
-                    writeJson("userData.json", userData)
-                    context.appText("添加特殊服务的家伙咯╰(￣▽￣)╮")
+                    writeJson("userData", userData)
+                    self.appText("添加特殊服务的家伙咯╰(￣▽￣)╮")
                 else:
-                    context.appText("你要找的人并不在这里面(๑°ㅁ°๑)‼")
+                    self.appText("你要找的人并不在这里面(๑°ㅁ°๑)‼")
             elif command == "delw":
                 trip_ = msg[6:12]
                 if trip_ not in whiteList:
-                    context.appText("你要找的人并不在这里面( ˃᷄˶˶̫˶˂᷅ )")
+                    self.appText("你要找的人并不在这里面( ˃᷄˶˶̫˶˂᷅ )")
                 else:
                     whiteList.remove(trip_)
                     if trip_ in keys:
                         del keys[trip_]
-                    writeJson("userData.json", userData)
-                    context.appText("删除白名单用户成功๑乛◡乛๑")
+                    writeJson("userData", userData)
+                    self.appText("删除白名单用户成功๑乛◡乛๑")
             elif command == "kkal":
                 try:
                     chocol = int(msg[6:])
-                    context.appText(self.kick(*self.nicks[-chocol:]), "part")
+                    self.kick(*self.nicks[-chocol:])
                 except ValueError:
-                    context.appText("寄了吧你")
+                    self.appText("寄了吧你")
             elif command == "chkr":
                 _17 = msg.split()
                 if len(_17) < 2:
-                    context.appText("\n".join(answer.keys()), "whisper")
+                    self.appText("\n".join(answer.keys()), "whisper")
                 else:
                     ans = answer.get(textPure(_17[1]))
                     if not ans:
-                        context.appText(f"当前问题还没有设置回答，请重新确认后查询（用`~`代表空格，`\\~`代表\\~）！", "whisper")
+                        self.appText(f"当前问题还没有设置回答，请重新确认后查询（用`~`代表空格，`\\~`代表\\~）！", "whisper")
                     else:
                         if len(_17) == 2:
                             _17 = []
                             for i, v in enumerate(ans):
                                 _17.append(f"{i}：{v[:55]}")
                             col = "\n".join(_17)
-                            context.appText(f"此问题的回答有：\n{col}", "whisper")
+                            self.appText(f"此问题的回答有：\n{col}", "whisper")
                         else:
                             try:
-                                context.appText(f"{ans[int(_17[2])]}", "whisper")
+                                self.appText(f"{ans[int(_17[2])]}", "whisper")
                             except:
-                                context.appText(f"当前问题还没有此序号，请重新确认后查询！", "whisper")
+                                self.appText(f"当前问题还没有此序号，请重新确认后查询！", "whisper")
             elif command == "tstr":
                 ans = textPure(msg[6:])
                 if ans:
                     for k, v in answer.items():
                         if re.search(k, ans):
-                            context.appText(k, "whisper")
+                            self.appText(k, "whisper")
                             break
                     else:
-                        context.appText(f"当前问题还没有设置回答，请重新确认后查询（用`~`代表空格，`\\~`代表\\~）！", "whisper")
+                        self.appText(f"当前问题还没有设置回答，请重新确认后查询（用`~`代表空格，`\\~`代表\\~）！", "whisper")
             elif command == "delr":
                 kilo = msg.split()
                 if len(kilo) < 2 or len(kilo) > 3:
-                    context.appText(f"命令错误，请使用`{OWNFIX}delr 问题 序号`的格式（序号可选，用`~`代表空格，`\\~`代表\\~）！", "whisper")
+                    self.appText(f"命令错误，请使用`{OWNFIX}delr 问题 序号`的格式（序号可选，用`~`代表空格，`\\~`代表\\~）！", "whisper")
                 else:
                     kilo[1] = textPure(kilo[1])
                     if len(kilo) == 2:
                         try: del answer[kilo[1]]
-                        except: context.appText(f"此问题还未设置答案，请重新确认后再次再试！", "whisper")
-                        else: context.appText(f"已成功删除"{kilo[1]}"的所有回答！", "whisper")
+                        except: self.appText(f"此问题还未设置答案，请重新确认后再次再试！", "whisper")
+                        else: self.appText(f"已成功删除“{kilo[1]}”的所有回答！", "whisper")
                     else:
                         try: ans = answer[kilo[1]].pop(int(kilo[2]))
-                        except: context.appText(f"此问题还未设置答案或序号错误，请重新确认后再次再试！", "whisper")
-                        else: context.appText(f"已成功删除回答："{ans}"！", "whisper")
-                    writeJson("answer.json", answer)
+                        except: self.appText(f"此问题还未设置答案或序号错误，请重新确认后再次再试！", "whisper")
+                        else: self.appText(f"已成功删除回答：“{ans}”！", "whisper")
+                    writeJson("answer", answer)
             elif command == "relo":
                 ind = msg[6:]
                 if ind == "long":
@@ -601,7 +650,7 @@ class Awaya:
                     sysList[9] = []
                 elif ind == "left":
                     left.msg = {}
-                    writeJson("userData.json", userData)
+                    writeJson("userData", userData)
                 elif ind == "peep":
                     self.peeper.allMsg = []
                 elif ind == "afks":
@@ -614,67 +663,67 @@ class Awaya:
                     ignore.clear()
                 else:
                     return
-                context.appText("成功")
+                self.appText("成功")
             elif command == "stfu":
                 sysList[2] = not sysList[2]
-                context.appText(f"阿瓦了这下: {sysList[2]}")
+                self.appText(f"阿瓦了这下: {sysList[2]}")
             elif command == "prtt":
                 _4w4 = msg[6:].split()
                 if len(_4w4) != 2:
-                    context.appText("参数不正确")
+                    self.appText("参数不正确")
                 else:
                     protect[_4w4[0]] = _4w4[1]
-                    context.appText(f"为昵称{_4w4[0]} 绑定识别码{_4w4[1]} 成功")
-                    writeJson("userData.json", userData)
+                    self.appText(f"为昵称{_4w4[0]} 绑定识别码{_4w4[1]} 成功")
+                    writeJson("userData", userData)
             elif command == "delp":
                 name = namePure(msg[6:])
                 if name not in protect:
-                    context.appText("此昵称还没有被保护")
+                    self.appText("此昵称还没有被保护")
                 else:
-                    context.appText(f"删除成功，被绑定的识别码有{protect[name]}")
+                    self.appText(f"删除成功，被绑定的识别码有{protect[name]}")
                     del protect[name]
-                    writeJson("userData.json", userData)
+                    writeJson("userData", userData)
             elif command == "remake":
-                context.remake = True
+                self.remake = True
             elif command == "atrm":
                 sysList[5] = not sysList[5]
-                context.appText(f"阿瓦了这下: {sysList[5]}")
+                self.appText(f"阿瓦了这下: {sysList[5]}")
             elif command == "beat":
                 try:
                     sysList[6] = int(msg[6:])
                 except:
-                    context.appText("QAQ")
+                    self.appText("QAQ")
                 else:
-                    context.appText("设置成功~")
+                    self.appText("设置成功~")
             elif command == "send":
                 sysList[8] = True
-                context.appText(msg[6:], "part")
+                self.appText(msg[6:], "part")
             elif command == "eval":
                 try:
                     if msg[6:7] == "*":
-                        context.appText(str(eval(msg[7:])))
+                        self.appText(str(eval(msg[7:])))
                     else:
                         exec(msg[6:])
                 except BaseException as e:
-                    context.appText("错误！\n```\n" + traceback.format_exc(chain=False) + "\n```")
+                    self.appText("错误！\n```\n" + traceback.format_exc(chain=False) + "\n```")
             # elif command == "motd":
             #     userData["motd"] = msg[6:]
-            #     writeJson("userData.json", userData)
+            #     writeJson("userData", userData)
             #     MotdChat(self.channel, MOD).rock()
         # 检查黑名单
         if black.check(**user) or sender in self.blacktemp:
-            context.returns = True
+            self.returns = True
         # 检查留言
-        context.appText(left.check(**user), "whisper")
+        self.appText(left.check(**user), "whisper")
     # 古兰枝掌管afk的神
-    def afks(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
+    def afks(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         if type_ != "whisper":
-            context.appText(self.afker.check(sender))
+            self.appText(self.afker.check(sender))
             if re.match(r"^afk\b", msg):
-                context.appText(self.afker.add(sender, msg[4:44] or "AFK"))
+                self.appText(self.afker.add(sender, msg[4:44] or "AFK"))
             if "@" in msg:
-                context.appText(self.afker.alert(msg))
-    def mainfunc(self, context: "Context", msg: str, sender: str, trip: str, type_: str, **kwargs):
+                self.appText(self.afker.alert(msg))
+    def mainfunc(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         try:
             command = msg.split()[0]
         except:
@@ -684,254 +733,278 @@ class Awaya:
         if msg[0] == PREFIX:
             command = command[1:]
             if command == "hash":
-                context.appText(hasher.hashByName(namePure(msg[6:])))
+                self.appText(hasher.hashByName(namePure(msg[6:])))
             elif command == "hasn":
                 nick = namePure(msg[6:])
                 if nick in self.nicks:
-                    context.appText(hasher.hashByCode(self.users.getAttr(nick, "hash")))
+                    self.appText(hasher.hashByCode(self.users.getAttr(nick, "hash")))
                 else:
-                   context.appText("此人当前不在线( ⊙ o ⊙ )")
+                   self.appText("此人当前不在线( ⊙ o ⊙ )")
             elif command == "code":
-                context.appText(hasher.hashByCode(msg[6:]))
+                self.appText(hasher.hashByCode(msg[6:]))
             elif command == "colo":
                 name = namePure(msg[6:])
                 if name not in self.nicks:
-                    context.appText("没有这个用户(╰_╯)#")
+                    self.appText("没有这个用户(╰_╯)#")
                 else:
                     color = self.users.getAttr(name, "color")
                     if color:
-                        context.appText(color)
+                        self.appText(color)
                     else:
-                        context.appText("RESET")
+                        self.appText("RESET")
             elif command == "left":
                 mauver = re.sub(r"(```|~~~)", r"\\\1", msg).split(" ")
                 text = " ".join(mauver[2:])
                 if len(mauver) < 3:
-                    context.appText("命令不正确！")
+                    self.appText("命令不正确！")
                 elif mauver[1].startswith("*"):
-                    context.appText(left.add("trip", mauver[1][1:], sender, trip, text))
+                    self.appText(left.add("trip", mauver[1][1:], sender, trip, text))
                 else:
-                    context.appText(left.add("nick", namePure(mauver[1]), sender, trip, text))
+                    self.appText(left.add("nick", namePure(mauver[1]), sender, trip, text))
             elif command == "peep":
                 if msg[6:7] == "*":
                     if not trip:
-                        context.appText("当前还没有识别码")
+                        self.appText("当前还没有识别码")
                     elif not msg[7:]:
                         try:
                             del subscribe[trip]
                         except:
                             pass
                         else:
-                            context.appText(f"为#{trip} 取消订阅成功")
+                            self.appText(f"为#{trip} 取消订阅成功")
                     else:
                         subscribe[trip] = msg[7:]
-                        context.appText(f"为#{trip} 订阅成功")
+                        self.appText(f"为#{trip} 订阅成功")
                 else:
-                    context.appText(self.peeper.getPeep(msg[6:]), "whisper")
+                    self.appText(self.peeper.getPeep(msg[6:]), "whisper")
             elif command == "welc":
                 if not msg[5:]:
                     if trip not in welcome:
-                        context.appText("你还没有设置欢迎语！")
+                        self.appText("你还没有设置欢迎语！")
                     else:
                         del welcome[trip]
-                        writeJson("userData.json", userData)
-                        context.appText(f"为识别码{trip}清除欢迎语成功了！")
+                        writeJson("userData", userData)
+                        self.appText(f"为识别码{trip}清除欢迎语成功了！")
                 elif not trip:
-                    context.appText("您当前还没有识别码，请重进并在昵称输入界面使用==昵称#密码==设置一个！")
+                    self.appText("您当前还没有识别码，请重进并在昵称输入界面使用==昵称#密码==设置一个！")
                 else:
                     welcome[trip] = msg[6:]
-                    writeJson("userData.json", userData)
-                    context.appText(f"为识别码{trip}设置欢迎语成功了！")
+                    writeJson("userData", userData)
+                    self.appText(f"为识别码{trip}设置欢迎语成功了！")
             elif command == "seen":
                 light = msg.split()
                 if len(light) < 2:
-                    context.appText("参数呢！！！")
+                    self.appText("参数呢！！！")
                 elif light[1][0:1] == "*":
-                    context.appText(sawer.get(namePure(light[1][1:]), "trip"))
+                    self.appText(sawer.get(namePure(light[1][1:]), "trip"))
                 else:
-                    context.appText(sawer.get(namePure(light[1]), "nick"))
+                    self.appText(sawer.get(namePure(light[1]), "nick"))
             elif command == "look":
                 name = namePure(msg[6:])
-                context.appText(self.looker.get(name))
+                self.appText(self.looker.get(name))
             elif command == "help":
                 kc = msg.split()
                 if len(kc) < 2:
-                    context.appText(f"{MENUMIN}", "whisper")
+                    self.appText(f"{MENUMIN}", "whisper")
                 elif len(kc) > 6:
-                    context.appText("太多了，装不下了~")
+                    self.appText("太多了，装不下了~")
                 else:
                     result = []
                     for cmd in kc:
                         if cmd in COMMANDS:
                             result.append(COMMANDS[cmd])
                     if result:
-                        context.appText("我是占位符awa\n" + "\n".join(result), "whisper")
+                        self.appText("我是占位符awa\n" + "\n".join(result), "whisper")
                     else:
-                        context.appText(random.choice(ERRORMSG))
+                        self.appText(random.choice(ERRORMSG))
             elif command == "long":
                 try:
                     index = int(msg[6:])
-                    context.appText(":\n" + self.peeper.getLong(index), "whisper")
+                    self.appText(":\n" + self.peeper.getLong(index), "whisper")
                 except:
-                    context.appText("索引有误！")
+                    self.appText("索引有误！")
             # 什么傻逼功能
             elif command == "Lori":
                 lori = msg[6:7]
                 if lori in ["l", "I", "1", "|", "丨"]:
                     if lori == "l":
-                        context.appText(f"您输入的"{lori}"是字母表的第十二个字母, "L"的小写。")
+                        self.appText(f"您输入的“{lori}”是字母表的第十二个字母, “L”的小写。")
                     elif lori == "I":
-                        context.appText(f"您输入的"{lori}"是字母表的第九个字母, "i"的大写。")
+                        self.appText(f"您输入的“{lori}”是字母表的第九个字母, “i”的大写。")
                     elif lori == "1":
-                        context.appText(f"您输入的"{lori}"是最小的正整数, 3-2的结果。")
+                        self.appText(f"您输入的“{lori}”是最小的正整数, 3-2的结果。")
                     elif lori == "|":
-                        context.appText(f"您输入的"{lori}"是我喜欢你, 按住Shift+\\\\可以打出。")
+                        self.appText(f"您输入的“{lori}”是我喜欢你, 按住Shift+\\\\可以打出。")
                     elif lori == "丨":
-                        context.appText(f"您输入的"{lori}"是一个汉字, 一般地, 读作gun3。")
+                        self.appText(f"您输入的“{lori}”是一个汉字, 一般地, 读作gun3。")
                 elif lori in ["0", "O"]:
                     if lori == "0":
-                        context.appText(f"您输入的"{lori}"是最小的自然数, 1-1的结果。")
+                        self.appText(f"您输入的“{lori}”是最小的自然数, 1-1的结果。")
                     elif lori == "O":
-                        context.appText(f"您输入的"{lori}"是字母表的第十五个字母, "o"的大写。")
+                        self.appText(f"您输入的“{lori}”是字母表的第十五个字母, “o”的大写。")
                 else:
-                    context.appText("不知道您大人想干嘛呢")
+                    self.appText("不知道您大人想干嘛呢")
             elif command == "decp":
                 for tp, ky in keys.items():
                     if msg[6:] == ky:
-                        context.appText(tp, "part")
-                        context.appText(".m disablecap", "part")
+                        self.appText(tp, "part")
+                        self.appText(".m disablecap", "part")
             elif command == "list":
                 cmd = msg[6:]
                 if cmd in cmdList:
-                    context.appText(cmdList[cmd]())
+                    self.appText(cmdList[cmd]())
                 elif cmd == "afks":
-                    context.appText(self.afker.list())
+                    self.appText(self.afker.list())
                 elif cmd == self.channel:
-                    context.appText(self.listNow())
+                    self.appText(self.listNow())
                 else:
-                    context.appText("早？")
+                    self.appText("早？")
             elif command == "setu":
                 if setuRl.frisk("*", 1):
-                    context.appText("rl乐，别涩涩了")
+                    self.appText("rl乐，别涩涩了")
                 elif type_ == "whisper":
-                    context.appText("别私信乐")
+                    self.appText("别私信乐")
                 elif not sysList[2]:
                     cid = getStr(6)
-                    context.appText("少女祈祷中. . .", "part", cid=cid)
+                    self.appText("少女祈祷中. . .", "part", cid=cid)
                     self.updateFunc(colorPic, cid, msg[6:])
             elif command == "prime":
                 try:
                     digit = msg[7:20]
                     eq = "\\*".join(getPrime(int(digit), []))
-                    context.appText(f"{digit}={eq}")
+                    self.appText(f"{digit}={eq}")
                 except ValueError:
-                    context.appText("请输入一个***正整数***啊啊啊啊(￢_￢)")
+                    self.appText("请输入一个***正整数***啊啊啊啊(￢_￢)")
             elif command == "hug":
                 to = namePure(msg[5:])
-                context.appText(f"/me @{sender} gives @{to} a hug.", "part")
+                self.appText(f"/me @{sender} gives @{to} a hug.", "part")
             elif command == "shoot":
                 to = namePure(msg[7:])
                 if random.random() > 0.15:
                     through = random.choice(BODY_PARTS)
-                    context.appText(f"/me @{sender} shoots @{to} through the {through}!", "part")
+                    self.appText(f"/me @{sender} shoots @{to} through the {through}!", "part")
                 else:
-                    context.appText(f"/me @{sender} shoots @{to}, but missed!", "part")
+                    self.appText(f"/me @{sender} shoots @{to}, but missed!", "part")
             elif command == "uwu":
-                context.appText("/uwuify " + sender, "part")
-                context.appText("😸！")
+                self.appText("/uwuify " + sender, "part")
+                self.appText("😸！")
+            elif command == "kkme":
+                nick = msg[6:]
+                trip_ = self.users.getAttr(nick, "trip")
+                if not trip:
+                    self.appText("你没有识别码！")
+                elif not nick:
+                    for kcin, canyu in self.users:
+                        if kcin != sender and canyu["trip"] == trip:
+                            self.sendMsg(KICK + " " + kcin)
+                            break
+                elif trip == trip_:
+                    self.sendMsg(KICK + " " + nick)
+                else:
+                    self.appText("识别码不符！")
             
             elif command == "sign":
                 if not trip:
-                    context.appText("你还没有识别码!")
+                    self.appText("你还没有识别码!")
                 else:
-                    context.appText(bank.sign(trip))
+                    self.appText(bank.sign(trip))
             elif command == "bank":
                 if not trip:
-                    context.appText("你还没有识别码!")
+                    self.appText("你还没有识别码!")
                 else:
-                    context.appText(bank.format(trip))
+                    self.appText(bank.format(trip))
             elif command == "rank":
-                context.appText(bank.rank())
+                self.appText(bank.rank())
             elif command == "regst":
                 if trip:
                     valid = msg[7:31].replace("\n", "")
-                    context.appText(bank.request(trip, valid or sender))
+                    self.appText(bank.request(trip, valid or sender))
                 else:
-                    context.appText("你还没有识别码!")
+                    self.appText("你还没有识别码!")
             elif command == "v":
                 juhee = msg.split(" ")[1:]
                 if not bank.get(trip):
-                    context.appText("你还没有银行！")
+                    self.appText("你还没有银行！")
                 elif not juhee:
-                    context.appText("参数错误！")
+                    self.appText("参数错误！")
                 elif len(juhee) == 1:
                     try:
                         num = int(juhee[0])
                     except:
-                        context.appText("参数错误！")
+                        self.appText("参数错误！")
                     else:
-                        if num < 0:
-                            context.appText("?")
-                        else:
-                            lucky = bank.random()
-                            bank.give(trip, lucky, num)
-                            context.appText(f"已转给**{bank.getAttr(lucky, 'name')}**({lucky}) {num}豆！")
+                        lucky = bank.random()
+                        bank.give(trip, lucky, num)
+                        self.appText(f"已转给**{bank.getAttr(lucky, 'name')}**({lucky}) {num}豆！")
                 else:
                     trip_ = juhee[0]
                     try:
                         num = int(juhee[1])
                         assert bank.get(trip_)
                     except:
-                        context.appText("参数错误！")
+                        self.appText("参数错误！")
                     else:
-                        if num < 0:
-                            context.appText("?")
-                        else:
-                            bank.give(trip, trip_, num)
-                            context.appText(f"已转给**{bank.getAttr(trip_, 'name')}**({trip_}) {num}豆！")
+                        bank.give(trip, trip_, num)
+                        self.appText(f"已转给**{bank.getAttr(trip_, 'name')}**({trip_}) {num}豆！")
             elif command == "packet":
                 headache = msg.split(" ")[1:]
                 if not bank.get(trip):
-                    context.appText("你还没有银行！")
+                    self.appText("你还没有银行！")
                 elif not headache:
-                    context.appText(bank.checkPackets())
+                    self.appText(bank.checkPackets())
                 elif headache[0] in bank.packets:
-                    context.appText(bank.robPacket(trip, headache[0]))
+                    self.appText(bank.robPacket(trip, headache[0]))
                 else:
                     try:
                         money = int(headache[0])
                         people = int(headache[1])
                     except:
-                        context.appText("参数错误！")
+                        self.appText("参数错误！")
                     else:
-                        context.appText(bank.sendPacket(trip, money, people))
+                        self.appText(bank.sendPacket(trip, money, people))
             elif command == "aka":
+                trip_ = msg[5:11]
                 if not bank.get(trip):
-                    context.appText("你还没有银行！")
+                    self.appText("你还没有银行！")
                 else:
-                    bank.bank[msg[5:11]] = trip
-                    context.appText(f"已将{msg[5:11]}关联到**{bank.getAttr(trip, 'name')}({trip})**！")
+                    related = bank.getRelated(trip)
+                    if not trip_:
+                        abraca = "，".join(related)
+                        self.appText(f"当前关联识别码有：{abraca}")
+                    elif not verify("trip", trip_):
+                        self.appText("阿瓦阿瓦啊！")
+                    elif trip_ in related:
+                        if isinstance(bank.bank.get(trip_), dict):
+                            self.appText(f"?!")
+                        else:
+                            bank.deregister(trip_)
+                            self.appText(f"已将{trip_}取消关联！")
+                    elif trip_ in bank.bank:
+                        self.appText("这个识别码已经被关联了！")
+                    else:
+                        bank.register(trip_, trip)
+                        self.appText(f"已将{trip_}关联到**{bank.getAttr(trip, 'name')}({trip})**！")
         elif namePure(msg) == self.nick:
             if icb9 > 990:
-                context.appText(random.choice(replys[1]).replace("sender", sender))
+                self.appText(random.choice(replys[1]).replace("sender", sender))
             elif icb9 > 666:
-                context.appText(f"So, {PREFIX}help might, uh, well, nevermind. . .",)
+                self.appText(f"So, {PREFIX}help might, uh, well, nevermind. . .",)
             else:
-                context.appText(random.choice(replys[0]).replace("sender", sender))
+                self.appText(random.choice(replys[0]).replace("sender", sender))
         elif msg.startswith(f"@{self.nick} "):
             msg = msg[len(self.nick)+2:]
             if msg == "提问":
-                context.appText(random.choice(replys[3]).replace("sender", sender))
+                self.appText(random.choice(replys[3]).replace("sender", sender))
             elif type_ != "whisper":
-                context.appText(reply(sender, msg))
+                self.appText(reply(sender, msg))
             else:
-                context.appText(reply(sender, msg, False))
+                self.appText(reply(sender, msg, False))
         elif msg == "菜单":
-            context.appText(f"{MENUMIN}", "whisper")
+            self.appText(f"{MENUMIN}", "whisper")
 
         elif msg[0] == "r" and type_ != "whisper":
             if msg == "r":
-                context.appText(truth.truthDo(sender, self.users.getAttr(sender, "hash")))
+                self.appText(truth.truthDo(sender, self.users.getAttr(sender, "hash")))
             elif msg[:2] == "r ":
                 sakura = msg.split()[1:]
                 try:
@@ -947,61 +1020,60 @@ class Awaya:
                         akashi = random.randint(r2, beR)
                     else:
                         akashi = random.randint(beR, r2)
-                context.appText(loliNum(akashi))
+                self.appText(loliNum(akashi))
             elif command == "rollen":
                 digit = msg[7:25]
-                try: context.appText(rollTo1(int(digit)))
-                except ValueError as e: context.appText(rollTo1(1000))
+                try: self.appText(rollTo1(int(digit)))
+                except ValueError as e: self.appText(rollTo1(1000))
             elif command == "rprime":
                 digit = msg[7:20]
                 try:
                     dig = random.randint(1, int(digit))
                     if dig > 0:
                         eq = "\\*".join(getPrime(dig, []))
-                        context.appText(f"{dig}={eq}")
+                        self.appText(f"{dig}={eq}")
                     else:
                         raise ValueError
                 except ValueError as e:
                     digit = str(random.randint(1, 1000))
                     eq = "\\*".join(getPrime(int(digit), []))
-                    context.appText(f"{digit}={eq}")
+                    self.appText(f"{digit}={eq}")
         elif msg.startswith("cc ") and type_ != "whisper":
-            context.appText(chess.main(sender, msg[3:].strip()))
+            self.appText(chess.main(sender, msg[3:].strip()))
         elif msg.startswith("p ") and type_ != "whisper":
-            poker.main(context, sender, msg[2:].replace("。", ".").strip())
+            poker.main(self, sender, msg[2:].replace("。", ".").strip())
         elif msg.startswith("t ") and type_ != "whisper":
-            context.appText(truth.main(msg[2:]).strip())
+            self.appText(truth.main(msg[2:]).strip())
         elif msg.startswith("u ") and type_ != "whisper":
-            uno.main(context, sender, msg[2:].replace("。", ".").replace("？！", "?!").strip())
+            uno.main(self, sender, msg[2:].replace("。", ".").replace("？！", "?!").strip())
         elif msg.startswith("b ") and type_ != "whisper":
-            bomber.main(context, sender, msg[2:].strip())
+            bomber.main(self, sender, msg[2:].strip())
         elif msg.startswith("s ") and type_ != "whisper":
-            countryKill.main(context, sender, msg[2:].replace("。", ".").strip())
+            countryKill.main(self, sender, msg[2:].replace("。", ".").strip())
         elif msg.startswith("g ") and type_ != "whisper":
-            dryEye.main(context, sender, msg[2:].replace("。", ".").strip())
-        elif msg.startswith("oe ") and type_ != "whisper":
-            oddEven.main(context, sender, msg[3:], trip)
-        elif msg.startswith("st ") and type_ != "whisper":
-            stock.main(context, sender, msg[3:], trip)
+            dryEye.main(self, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("oe "):
+            oddEven.main(self, msg[3:].strip(), type_)
         elif msg.startswith("z ") and type_ != "whisper":
-            zhaJinHua.main(context, sender, trip, msg[2:].strip())
+            zhaJinHua.main(self, sender, msg[2:].strip())
+        
         # 古老的梗
         elif namePure(msg) == sender:
-            context.appText("why did you call yourself")
+            self.appText("why did you call yourself")
         elif msg.lower() in lineReply and type_ != "whisper":
             call = lineReply[msg.lower()]
             if hasattr(call, "__call__"):
-                context.appText(call())
+                self.appText(call())
             else:
-                context.appText(random.choice(call).replace("sender", sender))
+                self.appText(random.choice(call).replace("sender", sender))
         elif icb9 > sysList[10]:
             fcjz = random.randint(1, 10)
             if fcjz > 8:
-                context.appText(random.choice(KAWAII).replace("sender", sender))
+                self.appText(random.choice(KAWAII).replace("sender", sender))
             elif fcjz > 5:
-                context.appText(chatApi(msg))
+                self.appText(chatApi(msg))
             else:
-                context.appText(EHHH + random.choice(sysList[9]))
+                self.appText(EHHH + random.choice(sysList[9]))
 
     def onJoin(self, joiner: str, result: dict):
         """{'cmd': 'onlineAdd', 'nick': str, 'trip': str, 
@@ -1032,7 +1104,7 @@ class Awaya:
                 return
 
         if banned.check(**result):
-            self.sendMsg(self.kick(joiner))
+            self.kick(joiner)
         elif black.check(**result):
             pass
         else:
@@ -1075,8 +1147,8 @@ class Awaya:
             if nick == self.nick:
                 self.userid = user["userid"]
             if banned.check(**user):
-                self.sendMsg(self.kick(nick))
-        writeJson("hash.json", data)
+                self.kick(nick)
+        writeJson("hash", data)
 
         if self.color:
             self.sendMsg(f"/color {self.color}")
@@ -1106,7 +1178,7 @@ class Awaya:
         trip = self.users.getAttr(sender, "trip")
         self.peeper.push("*", msg)
         self.log(f"\\*：{msg[:256]}")
-        self.sendMsg(self.rl(sender, msg, 0.2), force=True)
+        self.rl(sender, msg, 0.2)
         sawer.add(sender, trip, msg)
         self.looker.addUser(sender)
         self.whisper(sender, left.check(**self.users.getUser(sender)))
@@ -1130,21 +1202,17 @@ class Awaya:
             sender = data["nick"]
             sawer.add(sender, self.users.getAttr(sender, "trip"), data["text"])
             self.looker.add(sender)
-            self.sendMsg(self.rl(sender, text, 1), force=True)
+            self.rl(sender, text, 1)
     def onMsg(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
-        context = Context(self.nick, self.users.getUser(sender), type_)
+        self.newContext(self.users.getUser(sender), type_)
         for func in self.funclist:
-            func(context, msg, sender, trip, type_, **kwargs)
-            if context.remake:
+            func(msg, sender, trip, type_, **kwargs)
+            if self.remake:
                 self._reconnect()
                 return
-            elif context.returns:
+            elif self.returns:
                 break
-        self.sendMsg("\n".join(context.chat))
-        for to, text in context.whisper.items():
-            self.whisper(to, "\n".join(text))
-        for kws in context.part:
-            self.sendMsg(**kws)
+        self.runContext()
 
 if __name__ == "__main__":
     bocchi = Awaya(info["channel"], info["nick"], info["passwd"], info["color"])

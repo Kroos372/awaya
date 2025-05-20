@@ -3,10 +3,12 @@
 import json, time, math, re, websocket, requests, threading, traceback, sys, os, random, datetime, string
 from typing import Optional, Literal
 from enum import IntEnum
+from collections import deque
 
 # 真常量
 WSADD = "wss://hack.chat/chat-ws"
 # WSADD = "ws://localhost:8765"
+
 PREFIX, WHTFIX, OWNFIX = ";", "0", "."
 TIME_ZONE = +8
 LATEXOOM = r"$\begin{pmatrix}qaq\\[20231128em]\end{pmatrix}$"
@@ -17,7 +19,7 @@ MENUMIN = "\n".join([
     "早",
     "普通用户: ",
     f">前缀=={PREFIX}==:",
-    "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot, uwu",
+    "hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot, uwu, kkme",
     "阿瓦豆:",
     "regst, sign, bank, rank, v, packet, aka",
     "无前缀:",
@@ -175,6 +177,14 @@ COMMANDS = {
         "|参数: 无|",
         "|描述: uwuwuwuwuwuw|",
         f"|例: {PREFIX}uwu|"
+    ]),
+    "kkme": "\n".join([
+        "# KicK ME:",
+        "||",
+        "|:-:|",
+        "|参数: ?<昵称>|",
+        "|描述: 踢出相同识别码的僵尸号，参数留空自动匹配。|",
+        f"|例: {PREFIX}kkme Krs_|"
     ]),
 
     "regst": "\n".join([
@@ -560,11 +570,20 @@ MOTD = [
 
 # 独立于类的函数
 ## 处理BOM字符
-def dec(cont: str) -> str:
+def _debom(cont: str) -> str:
     if cont.startswith(u"\ufeff"):
         return cont.encode("utf8")[3:].decode("utf8")
     else:
         return cont
+## 读文件
+def readJson(filename: str):
+    with open(f"files/{filename}.json", encoding="utf8") as f:
+        data = json.loads(_debom(f.read()))
+    return data
+## 存入记忆中！
+def writeJson(filename, datas):
+    with open(f"files/{filename}.json", "w", encoding="utf8") as f:
+        json.dump(datas, fp=f, ensure_ascii=False, indent=2)
 ## 整数秒
 def now()->int:
     return int(time.time())
@@ -573,10 +592,6 @@ def gmNow(sec=0):
     if not sec:
         sec = now()
     return time.gmtime(sec + TIME_ZONE * Time.HOUR)
-## 存入记忆中！
-def writeJson(filename, datas):
-    with open("files/" + filename, "w", encoding="utf8") as f:
-        json.dump(datas, fp=f, ensure_ascii=False, indent=2)
 ## 那个啥，反正就是那个
 def getTime() -> str:
     tcg = gmNow()
@@ -615,7 +630,7 @@ def reply(sender: str, msg: str, api: bool=True) -> str:
             searched = re.search(ques, msg)
         except:
             del answer[ques]
-            writeJson("answer.json", answer)
+            writeJson("answer", answer)
             return f"*已清除{ques}的回答"
         else:
             if not (searched and ans):
@@ -680,13 +695,13 @@ def ftime(seconds, format_="%Y-%m-%d %H:%M:%S") -> str:
 ## 检验字符串规范
 def verify(type_, text):
     if type_ == "nick":
-        return re.search(r"^@?[\w]{1,24}$", text)
+        return re.match(r"^@?[\w]{1,24}$", text)
     elif type_ == "trip":
-        return re.search(r"^[A-Za-z0-9+/]{6}$", text)
+        return re.match(r"^[A-Za-z0-9+/]{6}$", text)
     elif type_ == "hash":
-        return re.search(r"^[A-Za-z0-9+/]{15}$", text)
+        return re.match(r"^[A-Za-z0-9+/]{15}$", text)
     elif type_ == "color":
-        return re.search(r"^#?([0-9a-fA-F]{3}){1,2}$", text)
+        return re.match(r"^#?([0-9a-fA-F]{3}){1,2}$", text)
     else:
         return None # 乖巧
 ## 又加回来了
@@ -827,36 +842,8 @@ class Users:
         return zhuyue
     def changeAttr(self, nick, attr, value):
         self.data[nick][attr] = value
-## 消息载体
-class Context:
-    def __init__(self, nick: str, user: dict, type_: Literal["chat", "whisper"]):
-        self.nick = nick # Bot名
-        self.user = user # 发送者的各项数据
-        self.type_ = type_ # chat/whisper
-
-        self.returns = False
-        self.remake = False
-        
-        self.chat = []
-        self.whisper = {}
-        self.part = []
-    def addWhisper(self, to, text):
-        if to not in self.whisper:
-            self.whisper[to] = []
-        self.whisper[to].append(text)
-    def appText(self, text: str, type_: str="", **kwargs):
-        """chat: 公屏, whisper: 私信, part: 强制独立(命令、custom等)"""
-        if not text:
-            return
-
-        type_ = type_ or self.type_
-        if type_ == "chat":
-            self.chat.append(text)
-        elif type_ == "whisper":
-            to = kwargs.get("to") or self.user["nick"]
-            self.addWhisper(to, text)
-        else:
-            self.part.append(dict({"text": text}, **kwargs))
+    def __iter__(self):
+        return iter(self.data.items())
 ## 消息记录器
 class Peeper:
     def __init__(self):
@@ -991,7 +978,7 @@ class Lefter:
         return "\n\n".join(k24)
     def _writeJson(self):
         userData["leftMsg"] = self.msg
-        writeJson("userData.json", userData)
+        writeJson("userData", userData)
 ## saw器
 class Sawer:
     def __init__(self, last: dict):
@@ -1029,7 +1016,7 @@ class Sawer:
         return observer
     def _writeJson(self):
         userData["lastSaw"] = self.last
-        writeJson("userData.json", userData)
+        writeJson("userData", userData)
 ## look器
 class Looker:
     def __init__(self):
@@ -1158,7 +1145,7 @@ class Black:
         return "\n".join(awaya)
     def _writeJson(self):
         userData[self.name] = self.data
-        writeJson("userData.json", userData)
+        writeJson("userData", userData)
 ## 房间状态
 class RoomChat:
     def __init__(self, channel: str, customId: str, nick: str=""):
@@ -1256,7 +1243,7 @@ class HourCount:
     def get(self) -> tuple:
         return (self.today["count"], len(self.todayUsers)), (self.hour["count"], len(self.hourUsers))
     def save(self):
-        writeJson("msgCount.json", msgCount)
+        writeJson("msgCount", msgCount)
 ## hash器
 class Hasher:
     def __init__(self, data):
@@ -1266,7 +1253,7 @@ class Hasher:
             self.data[hash_] = []
         if nick not in self.data[hash_]:
             self.data[hash_].append(nick)
-            writeJson("hash.json", self.data)
+            writeJson("hash", self.data)
     def hashByCode(self, code: str) -> str:
         try:
             return ", ".join(self.data[code]).replace("_", "\\_")
@@ -1283,179 +1270,21 @@ class Hasher:
             l[i] = f"{i+1}\\. "+l[i]
         result = "\n".join(l) or "没有这个名字！"
         return result if len(result) < 666 else toWeb(result)
-## 金钱系统
-class Bank:
-    def __init__(self, bank):
-        self.bank: dict[str, dict] = bank["bank"]
-        self.wait: dict[str, str] = bank["wait"]
-        self.packets: dict[str, dict[str, list | int]] = bank["packets"]
-    def get(self, trip: str) -> (dict | None):
-        trip_ = self.bank.get(trip)
-        while isinstance(trip_, str):
-            trip_ = self.bank.get(trip_)
-        return trip_
-    def getAttr(self, trip: str, attr: str):
-        money = self.get(trip)
-        return money.get(attr)
-    def setAttr(self, trip: str, attr: str, value):
-        money = self.get(trip)
-        money[attr] = value
-    def register(self, trip: str):
-        if trip in self.wait:
-            self.bank[trip] = {
-                "name": self.wait.pop(trip),
-                "money": 0,
-                "sign": 0,
-                "remain": 0,
-                "nextSign": 0
-            }
-    def request(self, trip: str, name: str) -> str:
-        if trip in self.bank:
-            money = self.get(trip)
-            money["name"] = name
-            return f"成功变更账户名为{name}"
-        else:
-            self.wait[trip] = name
-            return f"请求成功。{name}({trip})"
-    def sign(self, trip: str) -> str:
-        money = self.get(trip)
-        if not money:
-            return f"你还没有银行！使用=={PREFIX}regst==注册一个！"
-        if money["nextSign"] > now():
-            return f"你在{timeDiff(money['nextSign'] - now())}后才可再次签到！"
-        else:
-            if money["nextSign"] + Time.DAY < now():
-                money["remain"] = 0
-            addMoney = random.randint(900, 1100) + (1 * money["sign"]) + (50 * money["remain"])
-            money["money"] += addMoney
-            money["sign"] += 1
-            money["remain"] += 1
-            money["nextSign"] = now() + 20 * Time.HOUR
-            self.save()
-            return f"签到成功，获得{addMoney}阿瓦豆。\n" + self.format(trip, 1)
-    def sendPacket(self, trip: str, money: int, people: int) -> str:
-        if self.hasMoney(trip, money) != money:
-            return "你还没有那么多钱！"
-        elif (money / people) < 1:
-            return "太小气啦！"
-        elif money < 1 or people < 2:
-            return "太少了！"
-        else:
-            key = randomStr()
-            self.delete(trip, money)
-            self.packets[key] = {
-                "sender": trip,
-                "money": money,
-                "people": people,
-                "robbed": [],
-                "expire": now() + Time.DAY
-            }
-            self.save()
-            return f"红包发出去了，期限24(-25)小时，id是{key}！"
-    def robPacket(self, trip: str, key: str) -> str:
-        packet = self.packets.get(key)
-        name = self.getAttr(trip, "name")
-        if packet is None:
-            return "id不正确！"
-        elif trip in packet["robbed"]:
-            return "你已经抢过了！"
-        elif packet["people"] == 1:
-            money = packet["money"]
-            self.add(trip, money)
-            del self.packets[key]
-            self.save()
-            return f"**{name}**({trip})抢到了**{money}**豆，红包已被抢完！"
-        else:
-            maxAmount = round(packet["money"] / packet["people"] * 2, 1)
-            money = random.uniform(0.1, maxAmount)
-            self.add(trip, money)
-            packet["money"] -= money
-            packet["people"] -= 1
-            packet["robbed"].append(trip)
-            self.save()
-            return f"**{name}**({trip})抢到了**{money}**豆\n还剩{packet['money']}豆、{packet['people']}人！"
-    def checkPackets(self) -> str:
-        natsuki = ["### 当前红包"]
-        for key, packet in self.packets.items():
-            natsuki.append(f"ID: {key}，剩余金额{packet['money']}，剩余人数{packet['people']}，" + 
-                           f"将在{timeDiff(packet['expire'] - now())}后过期")
-        return "\n".join(natsuki)
-    def checkExpire(self) -> str:
-        yuri = []
-        for key, packet in self.packets.copy().items():
-            if now() > packet["expire"]:
-                trip = packet["sender"]
-                money = packet["money"]
-                self.add(trip, money)
-                yuri.append(f"ID为{key}的红包已过期，退回给**{self.getAttr(trip, 'name')}({trip})** {money}豆！")
-                del self.packets[key]
-        if yuri:
-            self.save()
-            return "\n".join(yuri)
-        else:
-            return ""
-
-    def delete(self, trip: str, num: int) -> int:
-        money = self.get(trip)
-        money["money"] -= self.hasMoney(trip, num)
-        self.save()
-        return num
-    def add(self, trip: str, num: int):
-        money = self.get(trip)
-        money["money"] += num
-        self.save()
-    def give(self, giver: str, reciever: str, num: int):
-        if num > ++0 and self.hasMoney(giver, num) == num:
-            money = self.delete(giver, num)
-            self.add(reciever, money)
-
-    def rename(self, trip: str, name: str):
-        money = self.get(trip)
-        money["name"] = name
-        self.save()
-    def hasMoney(self, trip: str, num: int) -> int:
-        money = self.get(trip)
-        if money["money"] >= num:
-            return num
-        else:
-            return money["money"]
-
-    def rank(self) -> str:
-        sort = sorted(((trip, v["money"], v["name"]) for trip, v in self.bank.items()), key=lambda x: x[1], reverse=True)[:25]
-        result = ["### 排行"]
-        rank = 1
-        for trip, num, name in sort:
-            result.append(f"{rank}\\. **{name}**({trip})：{num}")
-            rank += 1
-        return "\n".join(result)
-    def format(self, trip: str, simple: int=0) -> str:
-        money = self.get(trip)
-        if not money:
-            return "你还没有银行！"
-        elif simple == 2:
-            return f"余额**{money['money']}**阿瓦豆。"
-        elif simple == 1:
-            return f"当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']}**阿瓦豆。"
-        else:
-            return f"### {money['name']}({trip})\n当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']}**阿瓦豆。"
-    def save(self):
-        writeJson("userData.json", userData)
-    def random(self) -> str:
-        return random.choice(list(self.banks))
+## 注解用的
+class Awaish:
+    def appText(self, text: str, type_: str="", **kwargs):
+        """chat: 公屏, whisper: 私信, part: 强制独立(命令、custom等)"""
+        ...
+    def pop(self, num: int=1): ...
+    def runContext(self): ...
 
 # 读取文件们
-with open("files/info.json", encoding="utf8") as f:
-    info = json.loads(dec(f.read()))
-with open("files/hash.json", encoding="utf8") as f:
-    data = json.loads(dec(f.read()))
-with open("files/userData.json", encoding="utf8") as f:
-    userData = json.loads(dec(f.read()))
-with open("files/reply.json", encoding="utf8") as f:
-    replys = json.loads(dec(f.read()))
-with open("files/answer.json", encoding="utf8") as f:
-    answer = json.loads(dec(f.read()))
-with open("files/msgCount.json", encoding="utf8") as f:
-    msgCount = json.loads(dec(f.read()))
+info = readJson("info")
+data = readJson("hash")
+userData = readJson("userData")
+replys = readJson("reply")
+answer = readJson("answer")
+msgCount = readJson("msgCount")
 
 # 半常量
 AUTH, MOD = info["auth"], info["mod"]
@@ -1478,7 +1307,7 @@ protect =  userData["protect"]
 keys = userData["keys"]
 welcome = userData["welText"]
 
-msgRl = RateLimiter(20, 9)
+msgRl = RateLimiter(20, 13)
 joinRl = RateLimiter(5, 7)
 wordRl = RateLimiter(30, 3)
 setuRl = RateLimiter(40, 5)
@@ -1490,13 +1319,12 @@ banned = Black("banned")
 hasher = Hasher(data)
 hourCount = HourCount(msgCount)
 
-bank = Bank(userData["money"])
-
 lineReply = {
     # 纪念零姬……
     "0.0": ["0.0.0", ".0.", ";0;"],
     "游戏": ["\n".join([
-        "象棋(cc), 扑克(p), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g), 猜单双(oe), 炸金花(z)",
+        "象棋(cc), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g)",
+        "扑克(p), 猜单双(oe), 炸金花(z)",
         "发送`<前缀> help`获取对应帮助"
     ])],
 
@@ -1518,4 +1346,4 @@ if not os.path.exists("traceback"):
 for owner in OWNER:
     if not owner in whiteList:
         whiteList.append(owner)
-        writeJson("userData.json", userData)
+        writeJson("userData", userData)

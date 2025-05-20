@@ -10,10 +10,10 @@ DERULE = "\n".join([
     "出牌规则：",
     "1. 单张：发送 `g 3` 表示出 3。",
     "2. 对子：发送 `g 3*2` 表示出对 3。",
-    "3. 三张：发送 `g 3*3` 表示出 333。",
+    "3. 炸弹：发送 `g 3*3` 表示出 333。",
     "4. 顺子：发送 `g 3-5` 表示出 345。",
     "5. 双顺：发送 `g 3-5*2` 表示出 334455。",
-    "6. 炸弹：发送 `g 3*4` 表示出 3333。",
+    "6. 深水炸弹：发送 `g 3*4` 表示出 3333。",
     "7. 癞子：直接发送想要出的牌，系统会自动补齐癞子。",
     "8. 跳过：发送 `g .` 表示跳过回合。",
     "9. 查看牌：发送 `g check` 查看自己当前的牌。",
@@ -92,20 +92,20 @@ class DryEye:
         playerName = self.poker[player][0]
         player_cards = self.poker[player][1]
         
-        for rank in range(3, 16):
+        for rank in range(3, 15):
             for i in range (1,player_cards[rank]+1):
                 cards_info += cardsRank[rank] + " "
-        for rank in range(2, 3):
-            for i in range (1,player_cards[rank]+1):
-                cards_info += cardsRank[rank] + " "
+        
+        cards_info += " 2" * player_cards[2]
+        cards_info += " Joker" * player_cards[15]
 
         money_info = f"\n你现在还剩{self.playerMoney[player]}块钱，"
         if self.multipleTurn["players"] and player in self.multipleTurn["players"]:
             other_player = self.multipleTurn["players"][0] if self.multipleTurn["players"][1] == player else self.multipleTurn["players"][1]
-            money_info += f"正在和{self.poker[other_player][0]}的{self.multipleTurn['multiple']}倍数对决中！"
+            money_info += f"正在和@{self.poker[other_player][0]}的{self.multipleTurn['multiple']}倍数对决中！"
         else:
             money_info += "暂时没有进入倍数轮。"
-        self.context.appText(f"{playerName}真是杂鱼，要好好记牌哦！你的编号是{player}，上一家出牌的是{self.poker[self.upPlayer][0]}，出的牌是{self.upCardsInfo}。{cards_info}。{money_info}\n加油捏，看好你", "whisper", to=playerName)
+        self.context.appText(f"{playerName}真是杂鱼，要好好记牌哦！你的编号是{player}，上一家出牌的是@{self.poker[self.upPlayer][0]}，出的牌是{self.upCardsInfo}。{cards_info}。{money_info}\n加油捏，看好你", "whisper", to=playerName)
 
     #mM->multiplicative Multiplication
     def updateMultipleTurn(self, player1, player2, mM):
@@ -113,7 +113,7 @@ class DryEye:
         if not self.multipleTurn["players"]:
             self.multipleTurn["players"] = [player1, player2]
         self.multipleTurn["multiple"] *= mM
-        self.context.appText(f"\\*(੭*ˊᵕˋ)੭\\*ଘ，{self.poker[player1][0]}与{self.poker[player2][0]}间的倍数已累至{self.multipleTurn['multiple']}倍！")
+        self.context.appText(f"\\*(੭*ˊᵕˋ)੭\\*ଘ，@{self.poker[player1][0]}与@{self.poker[player2][0]}间的倍数已累至{self.multipleTurn['multiple']}倍！")
 
     def endMultipleTurn(self, winner):
         #结束倍数轮，进行结算
@@ -129,7 +129,7 @@ class DryEye:
         self.playerMoney[winner] += amount
         self.playerMoney[loser] -= amount
         
-        self.context.appText(f"该倍数轮结束！{self.poker[winner][0]}赢得了{amount}块钱，{self.poker[loser][0]}失去了{amount}块钱！")
+        self.context.appText(f"该倍数轮结束！@{self.poker[winner][0]}赢得了{amount}块钱，@{self.poker[loser][0]}失去了{amount}块钱！")
         # 重置倍数轮
         self.multipleTurn["players"] = []
         self.multipleTurn["multiple"] = 1
@@ -155,7 +155,11 @@ class DryEye:
         self.upPlayer = 0
         self.upBomb = (0,0,0)
         self.upCardsKind = "空"
-        self.context.appText(f"第{self.roundCount}轮结束！现在继续补牌，下一轮将由{self.poker[self.latestPlayer][0]}开始出牌")
+        
+        if self.gamePhase == 3:
+            return
+        
+        self.context.appText(f"第{self.roundCount}轮结束！现在继续补牌，下一轮将由@{self.poker[self.latestPlayer][0]}开始出牌")
         # 处理补牌
         i = self.latestPlayer
         for _ in range(self.playerNumero):  # 给三个玩家各补一张牌
@@ -262,13 +266,16 @@ class DryEye:
         
         card = self.deck.pop()
         self.poker[player][1][card] += 1
+        player_cards = self.poker[player][1]
         
         # 生成当前所有手牌信息
         cards_info = ""
-        player_cards = self.poker[player][1]
-        for rank in range(2, 16):
-            for i in range(1, player_cards[rank]+1):
+        for rank in range(3, 15):
+            for i in range (1,player_cards[rank]+1):
                 cards_info += cardsRank[rank] + " "
+        
+        cards_info += " 2" * player_cards[2]
+        cards_info += " Joker" * player_cards[15]
         
         # 私发补牌和手牌信息
         # print(self.poker[player][0])
@@ -328,7 +335,7 @@ class DryEye:
             self.checkPass = 0
             self.latestPlayer = player
             self.poker[player][1][card] -= 1
-            self.context.appText(f"{player_name}出了{cardsRank[card]}，@轮到{self.poker[self.next_player][0]} 出牌")
+            self.context.appText(f"@{player_name}出了{cardsRank[card]}，轮到@{self.poker[self.next_player][0]} 出牌")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -370,7 +377,7 @@ class DryEye:
             self.upCardsKind = "对子"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了对{cardsRank[card]}，轮到@{self.poker[self.next_player][0]} 出牌")#wawa这里已经改过了 owob self.poker[player][0]是昵称 self.poker[player][1]是牌桶
+            self.context.appText(f"@{player_name}出了对{cardsRank[card]}，轮到@{self.poker[self.next_player][0]} 出牌")#wawa这里已经改过了 owob self.poker[player][0]是昵称 self.poker[player][1]是牌桶
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -417,7 +424,7 @@ class DryEye:
             self.upCardsKind = "顺子"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了顺子{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌")
+            self.context.appText(f"@{player_name}出了顺子{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -464,7 +471,7 @@ class DryEye:
             self.upCardsKind = "双顺"
             self.checkPass = 0
             self.latestPlayer = player
-            self.context.appText(f"{player_name}出了双顺{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌力")
+            self.context.appText(f"@{player_name}出了双顺{self.upCardsInfo}，轮到@{self.poker[self.next_player][0]} 出牌力")
             self.playedCards[player] = True
             return not checkGameState()
 
@@ -510,7 +517,7 @@ class DryEye:
             if self.upCardsKind == "炸弹":
                 initial_multiple *= 2 # 反炸初始倍数翻倍
             if self.upCardsKind in ["单张","对子"]:
-                if self.upCards[0] == card or self.upCards[0] + 1 == card:
+                if int(self.upCards[0]) == card or int(self.upCards[0]) + 1 == card:
                     initial_multiple *= 2 # 冒头炸初始倍数翻倍
 
             if not self.upCardsKind == "空" and self.upPlayer != 0 and self.upPlayer != player:
@@ -585,11 +592,10 @@ class DryEye:
             # 检查是否需要结束大轮
             if self.checkPass >= self.playerNumero - 1:
                 if self.gamePhase == 3:
-                    self.context.appText(f"无人能打，{self.poker[self.latestPlayer][0]}继续出牌")
-                else:
-                    self.endRound()
+                    self.context.appText(f"无人能打，@{self.poker[self.latestPlayer][0]}继续出牌")
+                self.endRound()
             else:
-                self.context.appText(f"{self.poker[player][0]} 不想出（哼哼，那就轮到@{self.poker[self.next_player][0]} 出牌了")
+                self.context.appText(f"@{self.poker[player][0]} 不想出（哼哼，那就轮到@{self.poker[self.next_player][0]} 出牌了")
             return
         elif command == "":
             self.context.appText("雅达雅达（波奇摇头）\n![](https://img.duotegame.com/article/contents/2022/10/31/small_2022103134200180.gif)")
@@ -618,7 +624,7 @@ class DryEye:
         while first_card in (2, 15):  # 如果抽到2或大小王
             self.playerMoney[1] -= 10
             self.playerMoney[2] += 10
-            self.context.appText(f"{self.poker[1][0]}好点背hh，抽到了{cardsRank[first_card]}，扣10块钱,2号玩家得10块钱！ww")
+            self.context.appText(f"@{self.poker[1][0]}好点背hh，抽到了{cardsRank[first_card]}，扣10块钱,2号玩家得10块钱！ww")
             first_card = self.deck.pop()  # 重新抽牌
 
         self.upCards = str(first_card)
@@ -631,7 +637,7 @@ class DryEye:
         for i in range(self.playerNumero):
             self.checkCard(i+1)
         # 发送初始牌信息
-        self.context.appText(f"游戏开始！{self.poker[1][0]}的初始牌是{cardsRank[first_card]},接下来由=={self.poker[2][0]}==出牌")
+        self.context.appText(f"游戏开始！@{self.poker[1][0]}的初始牌是{cardsRank[first_card]},接下来由==@{self.poker[2][0]}==出牌")
         # 游戏阶段提示
         self.context.appText("第一阶段开始！如果有炸弹必须出炸！！！（悄悄提示，开门炸会有特殊奖赏哦")
 

@@ -1,369 +1,481 @@
-# code by Blaze
-from static import random, Context
+from static import Awaish
+import random
 
 UNOMENU = "\n".join([
-    "UNO，代码改写自[Blaze](https://github.com/geGDVS/UNO/)",
-    "u 加入: 开始或加入一场uno",
-    "u bot: 添加傻傻bot( ﾟ∀。)",
-    "u 退出: 在开始之前退出对局。",
-    "u 开始: 开始一场uno。",
-    "u <牌>: 出牌，具体规则请查看出牌规则。",
-    "u 结束: 在对局中结束游戏。",
-    "u 规则: 获取出牌规则。",
+    "UNO, Rewriten from [Blaze](https://github.com/geGDVS/UNO/)",
+    "u join",
+    "u bot",
+    "u quit",
+    "u start",
+    "u <card>",
+    "u end",
+    "u rules: rules in Chinese",
 ])
 UNORULE = "\n".join([
     "牌先出完者获胜。游戏规则:",
-    "一般地，uno牌分为<颜色><名称(多是数字)>两部分(如==绿2==, ==红禁==)，打出的牌需 与上家<颜色>或/和<名称>相同。",
+    "一般地，uno牌分为<颜色><名称(多是数字)>两部分(如==G2==, ==R.==)，打出的牌需 与上家<颜色>或/和<名称>相同。",
     "对于<名称>部分，存在以下几种具有特殊效果的情况:",
-    "1. ==转向==: 出牌顺序逆转(顺时针变逆时针，反之亦然)",
-    "2. ==禁==: 使下家跳过一回合",
+    "1. ==-==(转向): 出牌顺序逆转(顺时针变逆时针，反之亦然)",
+    "2. ==.==(禁止): 使下家跳过一回合",
     "3. ==+2==: 使下家增加2张牌，并跳过一回合。",
-    "另外有==变色==, ==+4==两种需要参数的特殊牌:",
-    "1. 变色 <颜色>: 指定下家需要出的颜色(无<名称>)",
-    "2. +4 <颜色>: 在==变色==的基础上，使下家增加4张牌，并跳过一回合。",
+    "另外有==wild==(变色), ==+4==两种需要参数的特殊牌:",
+    "1. wild <颜色>: 指定下家需要出的颜色(无<名称>)",
+    "2. +4 <颜色>: 在==wild==的基础上，使下家增加4张牌，并跳过一回合。",
     "#### +4的质疑规则: ",
-    "一般地，+4只能在无与当前牌<颜色>相同的牌时出(如当前牌是==蓝1==，手中拥有蓝色牌则不能出+4)。",
+    "一般地，+4只能在无与当前牌<颜色>相同的牌时出(如当前牌是==B1==，手中拥有B色牌则不能出+4)。",
     "玩家A出+4时，下家B可以选择质疑A。质疑后该玩家须展示手牌。此时有两种情况:",
     "1. A出牌合规(无与当前牌<颜色>相同的牌): 变色生效，B摸6张，并跳过一回合",
     "2. A出牌不合规(有与当前牌<颜色>相同的牌): 变色生效，A摸4张，B跳过一回合",
     "---",
     "出牌规则:",
-    "==u 牌 <参数>==出牌，例如==u 绿2==, ==u 变色 蓝==",
+    "==u 牌 <参数>==出牌，例如==u G2==, ==u wild B==",
     "==u .==跳过回合, ==u ?!==质疑",
     "==u check==查看自己目前的牌, ==u all==查看所有人牌数",
 ])
 
-class AutoBot:
-    def __init__(self, cards: list):
-        self.cards = cards
-    def getCardType(self) -> dict:
-        types: dict[str, int | list] = {
-            "红": [],
-            "黄": [],
-            "蓝": [],
-            "绿": [],
+class Card:
+    COLORS = {
+        "R": "red",
+        "G": "green",
+        "B": "blue",
+        "Y": "#d9da1f"
+    }
+    SORT = [str(num) for num in range(10)] + ["+2", ".", "-"]
+    def __init__(self, color: str="", number: str="", wild: str=""):
+        self.color = color
+        self.number = number
+        self.wild = wild
+    def __str__(self):
+        if self.color:
+            color_name = self.COLORS[self.color]
+            text = rf"$\color{{{color_name}}}{{{self.color}{self.number}}}$"
+            if self.number == ".":
+                text += "(🚫)"
+            elif self.number == "-":
+                text += "(🔄)"
+            return text
+        elif self.wild == "WILD":
+            return r"$\color{red}{w}\color{green}{i}\color{blue}{l}\color{#d9da1f}{d}$"
+        else:
+            return "+4"
+    def __lt__(self, other: "Card"):
+        if other.wild:
+            if self.color or other.wild == "+4":
+                return True
+            else:
+                return False
+        elif self.wild:
+            return False
+        elif self.color != other.color:
+            return self.color < other.color
+        else:
+            return self.SORT.index(self.number) < self.SORT.index(other.number)
+    def __eq__(self, value: str):
+        if self.wild:
+            return self.wild == value
+        else:
+            return self.color + self.number == value
+    @property
+    def display_name(self) -> str:
+        if self.color:
+            return str(self)
+        elif self.wild == "WILD":
+            return r"$\large{\color{red}{W}\color{green}{I}\color{blue}{L}\color{#d9da1f}{D}}$"
+        else:
+            return r"$\Large{+4}$"
+
+class Cards(list[Card]):
+    def __init__(self):
+        self._trash = []
+    
+    def pop_card(self, discard: bool=False) -> Card:
+        if not self:
+            self.extend(self._trash)
+            self._trash = []
+            random.shuffle(self)
+
+        card = self.pop()
+        if discard:
+            self.discard(card)
+        return card
+    def discard(self, card):
+        self._trash.append(card)
+    def _create_card(self, **kwargs):
+        self.append(Card(**kwargs))
+    def new_cards(self):
+        super().__init__()
+        for color in "RGBY":
+            for _ in range(2):
+                for number in range(1, 10):
+                    self._create_card(color=color, number=str(number))
+                for number in ["+2", ".", "-"]:
+                    self._create_card(color=color, number=number)
+            self._create_card(color=color, number="0")
+        for _ in range(4):
+            self._create_card(wild="+4")
+            self._create_card(wild="WILD")
+        random.shuffle(self)
+
+class Player:
+    def __init__(self, name: str):
+        self.is_bot = False
+        self.name = name
+        self.cards: list[Card] = []
+    def __str__(self):
+        return self.name
+    def __eq__(self, value):
+        return self.name == value
+
+    def get_card(self, command: str):
+        return self.cards[self.cards.index(command)]
+
+    def valid_play(self, card: Card | None) -> bool:
+        if not card:
+            return False
+        valid = True
+        self.cards.remove(card)
+        if len(self.cards) == 1 and self.cards[0].wild:
+            valid = False
+        self.cards.append(card)
+        return valid
+    def check_win(self) -> bool:
+        if len(self.cards) == 1:
+            uno.context.appText(f"{uno.current_player} ==UNO==!!!")
+        elif not self.cards:
+            uno.context.appText(
+                "Game over.\n" +
+                f"{uno.current_player} won."
+            )
+            uno.end_game()
+            return True
+        return False
+    def has_color(self, color: str) -> bool:
+        for card in self.cards:
+            if card.color == color:
+                return True
+        return False
+    def draw_cards(self, num: int):
+        for _ in range(num):
+            self.cards.append(uno.cards.pop_card())
+        # LOL
+        if num > 1:
+            s = "s"
+        else:
+            s = ""
+
+        uno.context.appText(f"Drawed {num} card{s}, " + self.format_cards(), "whisper", to=self.name)
+    def format_cards(self) -> str:
+        self.cards.sort()
+        return "Your cards: \n" + " ".join([str(card) for card in self.cards])
+
+class AutoBot(Player):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.is_bot = True
+
+    def draw_cards(self, num: int):
+        for _ in range(num):
+            self.cards.append(uno.cards.pop_card())
+
+    def getCardType(self) -> dict[str, list[Card]]:
+        types = {
+            "R": [],
+            "Y": [],
+            "B": [],
+            "G": [],
 
             "+2": [],
-            "禁": [],
-            "转向": [],
+            ".": [],
+            "-": [],
 
-            "+4": 0,
-            "变色": 0,
-            "?": 0 # ?
+            "WILD": []
         }
         types.update({str(x): [] for x in range(10)})
         for card in self.cards:
-            if card in types: # +4 变色
-                types[card] += 1
+            if card.wild:
+                types["WILD"].append(card)
             else:
-                types[card[0]].append(card)
-                types[card[1:]].append(card)
+                types[card.color].append(card)
+                types[card.number].append(card)
         
         return types
+
     def getMaxColor(self, types: dict=None) -> str:
         types = types or self.getCardType()
-        color = "红"
-        maxinum = len(types["红"])
-        for i in "黄蓝绿":
+        color = "R"
+        maxinum = len(types["R"])
+        for i in "YBG":
             if len(types[i]) > maxinum:
                 maxinum = len(types[i])
                 color = i
         return color
+
     def play(self) -> str:
         if uno.status == 2:
             return "."
         else:
-            text = ""
             types = self.getCardType()
-            color, number = uno.lastCard[0], uno.lastCard[1:]
+            color, number = uno.last_card.color, uno.last_card.number
+            card: Card = None
+
             if types[color]:
-                text = random.choice(types[color])
-            elif types[number]:
-                text = random.choice(types[number])
-            else:
-                if types["+4"]:
-                    text = f"+4 {self.getMaxColor(types)}"
-                elif types["变色"]:
-                    text = f"变色 {self.getMaxColor(types)}"
+                card = random.choice(types[color])
+                text = card.color + card.number
+            elif types.get(number):
+                card = random.choice(types[number])
+                text = card.color + card.number
+            elif types["WILD"]:
+                card = random.choice(types["WILD"])
+                text = f"{card.wild} {self.getMaxColor(types)}"
+
+            if not self.valid_play(card):
+                text = ""
+
         return text or "."
 
 class Uno:
     def __init__(self):
-        self.context: Context = None
-        self.initUno()
-    def initUno(self):
-        self.status = 0
-        self.players = []
-        self.playerCards = []
-        self.cards = []
-        self.nextPlayer = ""
-        self.lastCard = ""
-        self.waitPlayer = ""
-        self.add4Color = ""
-        self.botDict: dict[str, AutoBot] = {}
-    def initCards(self):
-        self.cards = []
-        for j in "红黄蓝绿":
-            for i in range(1, 10):
-                self.cards.append(j + str(i))
-                self.cards.append(j + str(i))
-            for i in ["+2", "禁", "转向"]:
-                self.cards.append(j + i)
-                self.cards.append(j + i)
-            self.cards.append(j + "0")
-        for i in range(4):
-            self.cards.append("+4")
-            self.cards.append("变色")
-
-    def no_card(self, num):
-        if len(self.cards) < num:
-            self.cards = self.initCards()
-            for i in self.playerCards:
-                for j in i:
-                    self.cards.remove(j)
-
-    def start_game(self):
-        self.status = 1
-        self.initCards()
-        random.shuffle(self.players)
-        for _ in range(len(self.players)):
-            playerCard = []
-            for _ in range(7):
-                addCard = random.choice(self.cards)
-                playerCard.append(addCard)
-                self.cards.remove(addCard)
-            self.playerCards.append(playerCard)
-        self.nextPlayer = self.players[0]
-        self.lastCard = random.choice(self.cards)
-        while self.lastCard[0] not in "红黄蓝绿":
-            self.lastCard = random.choice(self.cards)
-        self.cards.remove(self.lastCard)
-        for i in range(len(self.playerCards)):
-            player = self.players[i]
-            if player in self.botDict:
-                self.botDict[player] = AutoBot(sorted(self.playerCards[i]))
-            else:
-                self.context.appText(f"这是你的牌：\n{self.formatCards(i)}", "whisper", to=player)
-        self.context.appText(f"牌发完啦，初始牌是=={self.lastCard}==，顺序是 {self.formatOrder()}\n请@{self.nextPlayer} 先出！发送==u 规则==可以查看出牌规则哦")
-        if self.nextPlayer in self.botDict:
-            self.play(self.nextPlayer, self.botDict[self.nextPlayer].play())
-
-    def stop_game(self):
-        self.status = 0
-        self.players = []
-        self.playerCards = []
-        self.nextPlayer = ""
-        self.lastCard = False
-
-    def add4(self, id_, question=False, num=4):
-        if question:
-            nextid_ = (id_ + 2) % len(self.players)
-        else:
-            nextid_ = (id_ + 1) % len(self.players)
-        self.nextPlayer = self.players[nextid_]
-        self.no_card(4)
-        for i in range(num):
-            addCard = random.choice(self.cards)
-            self.playerCards[id_].append(addCard)
-            self.cards.remove(addCard)
-        self.status = 1
-        self.waitPlayer = ""
-
-    def color(self, color, id_):
-        nextid_ = (id_ + 1) % len(self.players)
-        self.nextPlayer = self.players[nextid_]
-        self.lastCard = color + "?"
-
-    def ban(self, id_):
-        next2id_ = (id_ + 2) % len(self.players)
-        self.nextPlayer = self.players[next2id_]
-
-    def add2(self, id_):
-        nextid_ = (id_ + 1) % len(self.players)
-        next2id_ = (id_ + 2) % len(self.players)
-        self.nextPlayer = self.players[next2id_]
-        self.no_card(2)
-        for i in range(2):
-            addCard = random.choice(self.cards)
-            self.playerCards[nextid_].append(addCard)
-            self.cards.remove(addCard)
-
-    def turn(self, id_) -> int:
-        self.players.reverse()
-        self.playerCards.reverse()
-        newNextId = len(self.players) - id_
-        self.nextPlayer = self.players[newNextId % len(self.players)]
-        return newNextId - 1
-
-    def formatCards(self, id_) -> str:
-        cards = self.playerCards[id_]
-        cards.sort()
-        return "\n" + ", ".join(cards)
-    def formatOrder(self) -> str:
+        self.context: Awaish
+        self.plus4_player: Player
+        self.status = 0 # 0: 结束, 1: 出牌, 2: 质疑
+        self.cards = Cards()
+        self.players: list[Player | AutoBot] = []
+    @property
+    def current_player(self):
+        return self.players[self.player_index]
+    
+    def _format_order(self) -> str:
         text = []
         for player in self.players:
-            if player == self.nextPlayer:
+            if player == self.current_player:
                 player = f"=={player}=="
-            text.append(player)
-        return " -> ".join(text)
-    def formatAll(self) -> str:
+            text.append(player.name)
+        return "Order: " + " -> ".join(text)
+    def _format_all(self) -> str:
         text = []
-        for i, player in enumerate(self.players):
-            if player == self.nextPlayer:
-                player = f"=={player}=="
-            text.append(f"{player}: {len(self.playerCards[i])}")
-        return "当前玩家各自手牌数: \n" + ", ".join(text)
-    def play(self, sender: str, msg: str):
-        msgList = msg.split()
-        if not msgList:
-            return
-        card, id_ = msgList[0], self.players.index(sender)
-        nextid_ = (id_ + 1) % len(self.players)
-        if card == "check":
-            self.context.appText(f"现在牌面上的牌是=={self.lastCard}==，顺序是 {self.formatOrder()}\n这是你的牌：{self.formatCards(id_)}", "whisper", to=sender)
-        elif card == "all":
-            self.context.appText(self.formatAll())
-        elif uno.status == 1 and sender == self.nextPlayer:
-            if card == ".":
-                nextid_ = (id_ + 1) % len(self.players)
-                addCard = random.choice(self.cards)
-                self.cards.remove(addCard)
-                if addCard[0] == self.lastCard[0] or addCard[1:] == self.lastCard[1:]:
-                    self.lastCard = addCard
-                    if addCard[1:] == "禁":
-                        self.ban(id_)
-                        self.context.appText(f"{sender}补到了=={addCard}==并将其打出，{self.players[nextid_]}跳过1轮，轮到@{self.nextPlayer} ！")
-                    elif addCard[1:] == "+2":
-                        self.add2(id_)
-                        self.context.appText(f"{sender}补到了=={addCard}==并将其打出，{self.players[nextid_]}加2张，轮到@{self.nextPlayer} ！")
-                        self.context.appText(f"你新增了2张牌，这是你现在的牌：\n{self.formatCards(nextid_)}。", "whisper", to=self.players[nextid_])
-                    elif addCard[1:] == "转向":
-                        id_ = self.turn(id_)
-                        self.context.appText(f"{sender}补到了=={addCard}==并将其打出，==顺序转换==，轮到@{self.nextPlayer} ！")
-                    else:
-                        self.nextPlayer = self.players[nextid_]
-                        self.context.appText(f"{sender}补到了=={addCard}==并将其打出，轮到@{self.nextPlayer} ！")
-                else:
-                    self.nextPlayer = self.players[nextid_]
-                    self.playerCards[id_].append(addCard)
-                    self.context.appText(f"{sender}补了一张牌，轮到@{self.nextPlayer} ！")
-                    self.context.appText(f"你新增了1张牌，这是你现在的牌：\n{self.formatCards(id_)}。", "whisper", to=sender)
-            elif card not in self.playerCards[id_]:
-                self.context.appText("你没有那张牌！")
-                
-            elif card == "+4":
-                if len(msgList) < 2:
-                    self.context.appText("缺少参数！")
-                elif msgList[1] not in "红黄蓝绿":
-                    self.context.appText("参数错误！")
-                else:
-                    self.add4Color = msgList[1]
-                    self.status = 2
-                    self.waitPlayer = self.players[nextid_]
-                    self.lastCard = self.lastCard[0]
-                    self.playerCards[id_].remove(card)
-                    self.context.appText(f"{sender}出了+4！@{self.players[nextid_]} 可以发送==u ?!==质疑或==u .==跳过。")
-            elif card == "变色":
-                if len(msgList) < 2:
-                    self.context.appText("缺少参数！")
-                elif msgList[1] not in "红黄蓝绿":
-                    self.context.appText("参数错误！")
-                else:
-                    self.color(msgList[1], id_)
-                    self.playerCards[id_].remove(card)
-                    self.context.appText(f"{sender}出了变色牌，颜色变为=={msgList[1]}==，轮到@{self.nextPlayer} ！")
-            elif card[0] == self.lastCard[0] or card[1:] == self.lastCard[1:]:
-                self.lastCard = card
-                if card[1:] == "禁":
-                    self.ban(id_)
-                    self.context.appText(f"{sender}出了=={card}==，{self.players[nextid_]}跳过1轮，轮到@{self.nextPlayer} ！")
-                elif card[1:] == "+2":
-                    self.add2(id_)
-                    self.context.appText(f"{sender}出了=={card}==，{self.players[nextid_]}加2张，轮到@{self.nextPlayer} ！")
-                    self.context.appText(f"你新增了2张牌，这是你现在的牌：\n{self.formatCards(nextid_)}。", "whisper", to=self.players[nextid_])
-                elif card[1:] == "转向":
-                    id_ = self.turn(id_)
-                    self.context.appText(f"{sender}出了{card}，==顺序转换==，轮到@{self.nextPlayer} ！")
-                else:
-                    self.nextPlayer = self.players[nextid_]
-                    self.context.appText(f"{sender}出了=={card}==，轮到@{self.nextPlayer} ！")
-                    self.no_card(1)
-                self.playerCards[id_].remove(card)
-            elif card not in ["+4", "变色"]:
-                return self.context.appText("不符合规则！")
-            if len(self.playerCards[id_]) == 1:
-                self.context.appText(f"{sender}==UNO==了！！！")
-            elif not self.playerCards[id_]:
-                self.context.appText(f"{sender}获胜，游戏结束。")
-                self.initUno()
-        elif sender == self.waitPlayer:
-            lastid_ = (id_ - 1) % len(self.players)
-            if card == ".":
-                self.add4(id_)
-                self.context.appText(f"{sender}不质疑，加4张，颜色变为=={self.add4Color}==。轮到@{self.nextPlayer} ！")
-                self.context.appText(f"你新增了4张牌，这是你现在的牌：\n{self.formatCards(id_)}。", "whisper", to=self.players[id_])
-                self.lastCard = self.add4Color + "?"
-            elif card == "?!":
-                if any(self.lastCard == i[0] for i in self.playerCards[lastid_]):
-                    self.add4(lastid_, True)
-                    lastPlayer = self.players[lastid_]
-                    self.context.appText(f"{lastPlayer}==有=={self.lastCard}色牌！")
-                    self.context.appText(f"{sender}质疑成功！=={lastPlayer}==加4张，颜色变为=={self.add4Color}==。轮到@{self.nextPlayer}！")
-                    self.context.appText(f"你新增了4张牌，这是你现在的牌：\n{self.formatCards(id_)}。", "whisper", to=lastPlayer)
-                    self.lastCard = self.add4Color + "?"
-                else:
-                    self.add4(id_, num=6)
-                    self.context.appText(f"{self.players[lastid_]}==没有=={self.lastCard}色牌！")
-                    self.context.appText(f"{sender}质疑失败，加==6==张，颜色变为=={self.add4Color}==。轮到@{self.nextPlayer} ！")
-                    self.context.appText(f"你新增了6张牌，这是你现在的牌：\n{self.formatCards(id_)}。", "whisper", to=self.players[id_])
-                    self.lastCard = self.add4Color + "?"
-        botNick = self.waitPlayer or self.nextPlayer
-        if botNick in self.botDict:
-            self.botDict[botNick].cards = self.playerCards[self.players.index(botNick)]
-            botCard = self.botDict[botNick].play()
-            with open("log.txt", "a+", encoding="utf8") as f:
-                f.write(str(self.playerCards))
-                f.write(f"{botNick}出了:{botCard}\n")
-            # self.context.appText(f"{botNick}出了:{botCard}")
-            self.play(botNick, botCard)
+        for player in self.players:
+            text.append(f"{player}: {len(player.cards)}")
+        return "\n".join(text)
+    
+    def start_game(self):
+        self.status = 1
+        self.player_index = 0
+        
+        random.shuffle(self.players)
+        self.cards.new_cards()
+        self.last_card = self.cards.pop_card(True)
+        while self.last_card.wild:
+            self.last_card = self.cards.pop_card(True)
+        
+        for player in self.players:
+            player.draw_cards(7)
 
-def main(context: Context, sender: str, msg: str):
-    uno.context = context
-    if msg == "加入":
-        if uno.status:
-            context.appText("游戏已经开始了，等下一轮吧。")
-        elif sender in uno.players:
-            context.appText("你已经加入了！")
+        self.context.appText(
+            self._format_order() + "\n" +
+            f"Start with card {self.last_card}\n" +
+            f"@{self.current_player} plays first.\n" +
+            "P.S. Enable latex to get best experience"
+        )
+        self._check_bot()
+
+    def end_game(self):
+        self.status = 0
+        self.players = []
+        self.cards.clear()
+    
+    def _get_player(self, sender: str) -> Player:
+        return self.players[self.players.index(sender)]
+    
+    def _next_player(self):
+        self.player_index = (self.player_index + 1) % len(self.players)
+        self.context.appText(f"Turn to @{self.current_player}")
+    
+    def _is_valid(self, card: Card) -> bool:
+        return card.color == self.last_card.color or card.number == self.last_card.number
+    
+    def _reverse(self):
+        self.players.reverse()
+        self.player_index = len(self.players) - 1 - self.player_index
+        self.context.appText("Order reversed")
+    
+    def _change_color(self, color: str):
+        new_card = Card(color)
+        self.last_card = new_card
+        self.context.appText(f"Color changed to {new_card.display_name}")
+    
+    def _challenge_plus4(self):
+        player = self.current_player
+        
+        if self.plus4_player.has_color(self.plus4_card.color):
+            self.context.appText(
+                "Challenge successfully!\n" +
+                f"{self.plus4_player} drawed 4 cards."
+            )
+            self.plus4_player.draw_cards(4)
         else:
-            uno.players.append(sender)
-            context.appText(f"加入成功，现在有{len(uno.players)}人。")
-    elif msg == "退出" and sender in uno.players:
+            self.context.appText(
+                "Challenge failed...\n" +
+                f"{player} drawed 6 cards."
+            )
+            player.draw_cards(6)
+
+        self.status = 1
+        self._next_player()
+    
+    def _play_wild_card(self, card: Card, color: str):
+        if color not in "RGBY":
+            self.context.appText("Wrong color.")
+            return
+
+        player = self.current_player
+        last_card = self.last_card
+        self.context.appText(f"{player} played {card.display_name}!")
+        self.cards.discard(card)
+        player.cards.remove(card)
+
+        if player.check_win():
+            return
+
+        self._change_color(color)
+        self._next_player()
+
+        if card.wild == "+4":
+            self.plus4_player = player
+            self.plus4_card = last_card
+            self.status = 2
+            self.context.appText(f"@{self.current_player} send ==u ?!== to challenge or ==u .== to skip.")
+    
+    def _play_normal_card(self, card: Card):
+        player = self.current_player
+        if not self._is_valid(card):
+            self.context.appText("Invalid play.")
+            return
+
+        if not player.valid_play(card):
+            self.context.appText("The last card cannot be a wild card")
+            return
+        
+        self.cards.discard(card)
+        player.cards.remove(card)
+        self._normal_card_effect(card)
+    
+    def _normal_card_effect(self, card: Card):
+        player = self.current_player
+        self.context.appText(f"{player} played {card.display_name}")
+        
+        if player.check_win():
+            return
+        
+        if card.number == "-":
+            self._reverse()
+        elif card.number == ".":
+            self._next_player()
+            self.context.appText(f"Skipped {self.current_player}")
+        elif card.number == "+2":
+            self._next_player()
+            self.current_player.draw_cards(2)
+            self.context.appText(f"{self.current_player} drawed 2 cards then skipped")
+
+        self.last_card = card
+        self._next_player()
+    
+    def _check_bot(self):
+        if self.status and self.current_player.is_bot:
+            bot: AutoBot = self.current_player
+            self.play(bot.name, bot.play())
+    
+    def play(self, sender: str, msg: str):
+        if msg == "check":
+            player = self._get_player(sender)
+            self.context.appText(
+                f"Last card: {self.last_card}, "
+                + self._format_order()
+                + player.format_cards(),
+                "whisper", to=sender
+            )
+        elif msg == "all":
+            self.context.appText(
+                f"Order: {self._format_order()}\n" +
+                "Player hands: \n" + self._format_all()
+            )
+        elif self.current_player == sender:
+            player = self.current_player
+            if msg == "?!" and self.status == 2:
+                self._challenge_plus4()
+            elif msg == ".":
+                if self.status == 1:
+                    drawed_card = self.cards.pop_card()
+                    self.context.appText(f"{sender} drawed 1 card")
+                    if self._is_valid(drawed_card):
+                        self._normal_card_effect(drawed_card)
+                        self.cards.discard(drawed_card)
+                    else:
+                        player.cards.append(drawed_card)
+                        self.context.appText(player.format_cards(), "whisper", to=sender)
+                        self._next_player()
+                else:
+                    self.context.appText(
+                        f"{sender} didn't challenge.\n"
+                        f"{sender} drawed 4 cards then skipped."
+                    )
+                    self.status = 1
+                    player.draw_cards(4)
+                    self._next_player()
+            elif self.status == 1:
+                try:
+                    command, *args = msg.upper().split(" ")
+                    card = player.get_card(command)
+                    if card.wild:
+                        self._play_wild_card(card, args[0])
+                    else:
+                        self._play_normal_card(card)
+                except Exception:
+                    self.context.appText("Wrong play.")
+            else:
+                self.context.appText("Wrong play.")
+        else:
+            self.context.appText("Not your turn.")
+        
+        self._check_bot()
+
+def main(context: Awaish, sender: str, msg: str, bot: bool=False):
+    if msg == "join":
+        if uno.status:
+            context.appText("The game is in progress, please wait for the next round")
+        elif sender in uno.players:
+            context.appText("You've already joined")
+        else:
+            if not bot:
+                uno.players.append(Player(sender))
+            else:
+                uno.players.append(AutoBot(sender))
+            context.appText(f"Joined successfully, {len(uno.players)} player(s) now.")
+    elif msg == "quit" and sender in uno.players:
         uno.players.remove(sender)
-        context.appText("退出成功...")
-    elif msg == "开始" and not uno.status:
+        context.appText("You left the game...")
+    elif msg == "start" and not uno.status:
         if len(uno.players) >= 2:
+            uno.context = context
             uno.start_game()
         else:
-            context.appText("人数不够！")
-    elif msg == "结束" and uno.status:
-        uno.initUno()
-        context.appText("结束了...")
+            context.appText("Not enough people.")
+    elif msg == "end" and uno.status:
+        uno.end_game()
+        context.appText("Game over...")
     elif msg == "help":
         context.appText(UNOMENU)
-    elif msg == "规则":
+    elif msg == "rules":
         context.appText(UNORULE)
     elif msg[:3] == "bot":
         addNick = msg[4:] or context.nick
         if uno.status:
-            context.appText("这局已经开始了，等下局吧(￣▽￣)")
-        elif addNick in uno.botDict:
-            del uno.botDict[addNick]
+            context.appText("The game is in progress, please wait for the next round")
+        elif addNick in uno.players:
             context.appText("BOT!!!!!!!😭")
-            main(context, addNick, "退出")
+            main(context, addNick, "quit", True)
         else:
-            uno.botDict[addNick] = None
             context.appText("BOT!!!!!!!ヾ|≧_≦|〃")
-            main(context, addNick, "加入")
+            main(context, addNick, "join", True)
     elif sender in uno.players:
         uno.play(sender, msg)
 
