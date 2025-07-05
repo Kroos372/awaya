@@ -1,0 +1,20 @@
+﻿{
+  "nick": "awa_ya",
+  "passwd": "",
+  "channel": "lounge",
+  "color": "f1ad9d",
+
+  "owner": ["coBad2", "9kQGU6", "aAIT/y", "r2SKbu"],
+  "name": "阿瓦娅",
+
+  "prologue": [
+    "早上好。发送 菜单 以获取帮助。"
+  ],
+  "auth": "",
+  "mod": "",
+
+  "url": "",
+  "token": "",
+
+  "debug": false
+}
