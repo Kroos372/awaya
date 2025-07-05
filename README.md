@@ -11,12 +11,12 @@
 
 - 加速:```pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt ```
 
-1. 自定义[info.json](files/info.json)。  
+2. 自定义[info.json](files/info.json)。  
 
-2. 运行[main.py](main.py)。  
+3. 运行[main.py](main.py)。  
 
 ### 别的
-特别感谢[DPG](https://github.com/Doppelganger-phi)与[Blaze](https://github.com/geGDVS)提供过的服务器支持。  
+特别感谢[DPG](https://github.com/Doppelganger)与[Blaze](https://github.com/geGDVS)提供过的服务器支持。  
 感谢Blaze, sora的部分代码贡献，以及所有使用过阿瓦娅的大家。
 
 ## English ver.
