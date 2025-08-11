@@ -1,8 +1,8 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, poker, truth, uno, dryEye, countryKill
-from money import bank, LoanStatus, oddEven, zhaJinHua, blackjack
+from games import bomber, chess, truth, poker, uno, dryEye, countryKill, wordle, snakeLadder, richup
+from money import bank, stock, LoanStatus, oddEven, zhaJinHua, blackjack
 
 # OOP, 但不完全OOP
 class Awaya:
@@ -32,12 +32,14 @@ class Awaya:
             for line in lines:
                 array = line.split("：")
                 _nick = array[0]
-                if not ignore.check(nick=_nick):
+                if verify("nick", _nick) and not ignore.check(nick=_nick):
                     self.peeper.push(_nick, "：".join(array[1:]))
+        
         # 干活
         self._reconnect()
         threading.Thread(target=self._clock).start()
         threading.Thread(target=self._heartbeat).start()
+        threading.Thread(target=self._stock_updater).start()
         # threading.Thread(target=self._person_control).start() # 人工操作
     def _reconnect(self, pswd="", rand=False):
         try:
@@ -84,7 +86,7 @@ class Awaya:
                     self.ws.close()
                     sys.exit()
                 else:
-                    self.sendMsg(inputs, True)
+                    self.sendMsg(inputs, force=True)
             except:
                 pass
     # 心跳，检测是否被踢
@@ -103,7 +105,6 @@ class Awaya:
 
             time.sleep(3600 - bo_od.tm_min*60 - bo_od.tm_sec)
 
-            sysList[3] = nowDay()
             if sysList[1]:
                 try:
                     self.sendMsg(CLOCKS[hour])
@@ -123,8 +124,10 @@ class Awaya:
                 except:
                     pass
             if hour == 0:
+                sysList[3] = nowDay()
                 msgCount[sysList[3]] = {"count": 0, "users": []}
                 hourCount.initDay()
+                # stock.new_stock()
             msgCount["hour"] = {"count": 0, "users": []}
             hourCount.initHour()
 
@@ -132,6 +135,11 @@ class Awaya:
             bank.check_aka_expire()
             bank.update_loans()
             left.check_expire()
+    # e
+    def _stock_updater(self):
+        while True:
+            time.sleep(stock.heartbeat)
+            self.sendMsg(stock.update_stocks())
 
     def newContext(self, user: dict, type_: Literal["chat", "whisper"]):
         self.user = user # 发送者的各项数据
@@ -244,24 +252,30 @@ class Awaya:
         except BaseException as e:
             error = traceback.format_exc(chain=False)
             if sysList[5]:
-                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{error}\n```", True)
+                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{error}\n```", force=True)
             else:
                 filename = e.__class__.__name__ + ftime(now(), "%Y_%m_%d_%H_%M_%S")
                 with open(f"traceback/{filename}.txt", "w", encoding="utf8") as f:
                     f.write(error)
-                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}\n```\n具体请查看文件……", True)
+                self.sendMsg(f"被玩坏了，呜呜呜……\n```\n{e}\n```\n具体请查看文件……", force=True)
                 # time.sleep(6)
                 # self._reconnect()
         self.rock()
     ## 玩
     def get_status(self) -> str:
         return "\n".join([
-            "### Awaya v2.1.3",
+            "### Awaya v2.2.4",
             f"上次重启：{status_list[0]}",
             f"历史记录条数：{len(self.peeper.allMsg)}",
             "",
             "---",
             "#### 最近更新",
+            "25.8.10: 大富翁增加交易系统",
+            "25.8.8: 大富翁demo",
+            "25.8.4: 蛇棋",
+            "25.8.3: 总之就是各种改",
+            "25.8.2: 股票",
+            "25.8.1: wordle",
             "25.6.29: 历史上的今天",
             "25.6.27: 修复bug，增加小优化",
             "25.6.21: 增加存钱功能",
@@ -957,12 +971,17 @@ class Awaya:
             elif command == "sign":
                 self.appText(bank.sign(trip))
             elif command == "bank":
-                if not msg[6:]:
+                if len(msg_list) > 2:
+                    trip = msg_list.pop(1)
+                if len(msg_list) < 2:
                     self.appText(bank.format(trip))
                 else:
-                    self.appText(bank.format(msg[6:]))
+                    self.appText(bank.format(trip, -1))
             elif command == "rank":
-                self.appText(bank.rank())
+                try:
+                    self.appText(bank.rank(int(msg_list[1])))
+                except:
+                    self.appText(bank.rank())
             elif command == "v":
                 juhee = msg_list[1:]
                 if not juhee:
@@ -1071,6 +1090,40 @@ class Awaya:
                     self.appText("参数有误")
                 else:
                     self.appText(bank.store(trip, num))
+            elif command == "stock":
+                if msg[7:].strip() == "time":
+                    self.appText(f"距下次更新还有{timeDiff(stock.next_update - now())}")
+                    return 
+                if len(msg_list) > 1 and msg_list[1] == "fun":
+                    try:
+                        num = int(msg_list[2])
+                        assert num < 13
+                    except:
+                        self.appText(random_design())
+                    else:
+                        self.appText(random_design(num))
+                    return
+                if len(msg_list) < 4:
+                    if len(msg_list) < 2:
+                        self.appText(stock.check_stocks(trip, 1))
+                    else:
+                        self.appText(stock.check_stocks(trip))
+                    return
+
+                if msg_list[2] not in "+-":
+                    self.appText("请输入文本")
+                    return
+                try:
+                    code = int(msg_list[1]) - 1
+                    num = int(msg_list[3])
+                    assert stock.stocks[code]
+                except:
+                    self.appText("参数有误")
+                else:
+                    if msg_list[2] == "+":
+                        self.appText(stock.buy_stock(trip, code, num))
+                    else:
+                        self.appText(stock.sell_stock(trip, code, num))
 
         elif namePure(msg) == self.nick:
             if icb9 > 990:
@@ -1090,7 +1143,38 @@ class Awaya:
         elif msg == "菜单":
             self.appText(f"{MENUMIN}", "whisper")
 
-        elif msg[0] == "r" and type_ != "whisper":
+        elif msg.startswith("oe "):
+            oddEven.main(self, msg[3:].strip(), type_)
+
+        elif type_ == "whisper":
+            return
+        elif msg.startswith("cc "):
+            self.appText(chess.main(sender, msg[3:].strip()))
+        elif msg.startswith("p "):
+            poker.main(self, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("t "):
+            self.appText(truth.main(msg[2:]).strip())
+        elif msg.startswith("u "):
+            uno.main(self, sender, msg[2:].replace("。", ".").replace("？！", "?!").strip())
+        elif msg.startswith("b "):
+            bomber.main(self, sender, msg[2:].strip())
+        elif msg.startswith("s "):
+            countryKill.main(self, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("g "):
+            dryEye.main(self, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("w "):
+            wordle.main(self, sender, msg[2:].replace("。", ".").strip())
+        elif msg.startswith("sl "):
+            snakeLadder.main(self, sender, msg[3:].replace("。", ".").strip())
+        elif msg.startswith("ru "):
+            richup.main(self, sender, msg[3:].replace("。", ".").strip())
+
+        elif msg.startswith("z "):
+            zhaJinHua.main(self, sender, msg[2:].strip())
+        elif msg.startswith("bj "):
+            blackjack.main(self, sender, msg[3:].strip())
+ 
+        elif msg[0] == "r":
             if msg == "r":
                 self.appText(truth.truthDo(sender, self.users.getAttr(sender, "hash")))
             elif msg[:2] == "r ":
@@ -1126,31 +1210,11 @@ class Awaya:
                     digit = str(random.randint(1, 1000))
                     eq = "\\*".join(getPrime(int(digit), []))
                     self.appText(f"{digit}={eq}")
-        elif msg.startswith("cc ") and type_ != "whisper":
-            self.appText(chess.main(sender, msg[3:].strip()))
-        elif msg.startswith("p ") and type_ != "whisper":
-            poker.main(self, sender, msg[2:].replace("。", ".").strip())
-        elif msg.startswith("t ") and type_ != "whisper":
-            self.appText(truth.main(msg[2:]).strip())
-        elif msg.startswith("u ") and type_ != "whisper":
-            uno.main(self, sender, msg[2:].replace("。", ".").replace("？！", "?!").strip())
-        elif msg.startswith("b ") and type_ != "whisper":
-            bomber.main(self, sender, msg[2:].strip())
-        elif msg.startswith("s ") and type_ != "whisper":
-            countryKill.main(self, sender, msg[2:].replace("。", ".").strip())
-        elif msg.startswith("g ") and type_ != "whisper":
-            dryEye.main(self, sender, msg[2:].replace("。", ".").strip())
-        elif msg.startswith("oe "):
-            oddEven.main(self, msg[3:].strip(), type_)
-        elif msg.startswith("z ") and type_ != "whisper":
-            zhaJinHua.main(self, sender, msg[2:].strip())
-        elif msg.startswith("bj ") and type_ != "whisper":
-            blackjack.main(self, sender, msg[3:].strip())
-        
+
         # 古老的梗
         elif namePure(msg) == sender:
             self.appText("why did you call yourself")
-        elif msg.lower() in lineReply and type_ != "whisper":
+        elif msg.lower() in lineReply:
             call = lineReply[msg.lower()]
             if hasattr(call, "__call__"):
                 self.appText(call())

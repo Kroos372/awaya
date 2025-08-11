@@ -351,7 +351,7 @@ class AutoBot(Player):
         # 飞机
         elif last_hand.type == SingleHand.PLANE and not isFriend:
             llength = last_hand.length
-            withs_length = len(last_hand.split(" ")[1])
+            withs_length = last_hand.withs_length
             for start, length in types["3st"]:
                 if length >= llength:
                     rend = start + length - 1
@@ -629,6 +629,7 @@ class Poker:
             if hand.type == SingleHand.ROCKET:
                 self.last_hand = SingleHand()
                 self.context.appText(f"@{player} 继续出牌")
+                self.check_end()
                 return
 
         self.last_hand = hand

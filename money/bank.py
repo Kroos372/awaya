@@ -1,4 +1,8 @@
-from static import readJson, writeJson, random, now, timeDiff, randomStr, Time, PREFIX, ftime
+from static import readJson, writeJson, now, timeDiff, randomStr, Time, PREFIX, ftime, random_design
+import random, math
+import numpy as np
+
+# 有机会拆分一下
 
 class LoanStatus:
     WAITING = 0
@@ -7,7 +11,6 @@ class LoanStatus:
 
 class Bank:
     offering_box = "r2SKbu"
-    
     def __init__(self, bank: dict):
         self.bank: dict[str, dict] = bank["bank"]
         self.wait: dict[str, str] = bank["wait"]
@@ -108,7 +111,7 @@ class Bank:
         self.register(target_trip, money)
     
     # 操作豆数
-    def delete(self, trip: str, num: int, reason: str="", force: bool=False) -> int:
+    def delete(self, trip: str, num: int, reason: str="", force: bool=False, save: bool=True) -> int:
         if num <= 0:
             return num
 
@@ -120,18 +123,24 @@ class Bank:
 
         money["money"] -= real_num
         money["money"] = round(money["money"], 2)
-        self.add_reason(trip, f"{reason}：-{real_num}")
-        self.save()
+
+        if reason:
+            self.add_reason(trip, f"{reason}：-{real_num:,}")
+        if save:
+            self.save()
         return num
-    def add(self, trip: str, num: int, reason: str=""):
+    def add(self, trip: str, num: int, reason: str="", save: bool=True):
         if num <= 0:
             return
 
         money = self.get(trip)
         money["money"] += num
         money["money"] = round(money["money"], 2)
-        self.add_reason(trip, f"{reason}：+{num}")
-        self.save()
+        
+        if reason:
+            self.add_reason(trip, f"{reason}：+{num:,}")
+        if save:
+            self.save()
     def give(self, giver: str, reciever: str, num: int, reason: str="", benefit: bool=False):
         """benefit: 强制加钱"""
         if benefit and not self.loans.get(f"store-{giver}"):
@@ -143,7 +152,7 @@ class Bank:
             self.delete(giver, num, f"{reason}转给{reciever}", force)
             self.add(reciever, num, f"{reason}来自{giver}的转账")
     def offer(self, num: int, reason: str=""):
-        self.add(self.offering_box, num, reason)
+        self.add(self.offering_box, num, reason, save=False)
 
     # 债务系统
     def borrow(self, borrower: str, num: int, days: int, lender: str) -> str:
@@ -300,7 +309,7 @@ class Bank:
             f"#### {loan_id}",
             f"借款者：**{self.getAttr(borrower, 'name')}({borrower})**，" +
             f"贷款者：**{self.getAttr(lender, 'name')}({lender})**，" +
-            f"借贷金额：**{loan['num']}**",
+            f"借贷金额：**{loan['num']:,}**",
         ]
 
         if loan["status"] == LoanStatus.WAITING:
@@ -312,13 +321,13 @@ class Bank:
         elif loan["status"] == LoanStatus.UNPAYED:
             text.extend([
                 "状态：待归还",
-                f"利率：{loan['interest']}，剩余归还金额：{loan['need_repay']}",
+                f"利率：{loan['interest']}，剩余归还金额：{loan['need_repay']:,}",
                 f"将于{timeDiff(loan['overdue_time'] - now())}后逾期"
             ])
         else:
             text.extend([
                 "状态：==逾期==",
-                f"利率：{loan['interest']}，剩余归还金额：{loan['need_repay']}",
+                f"利率：{loan['interest']}，剩余归还金额：{loan['need_repay']:,}",
             ])
         
         return "\n".join(text)
@@ -370,6 +379,7 @@ class Bank:
         if save_needed:
             self.save()
 
+    # 信用（没用）
     def add_credit(self, trip: str, num: int):
         credits = self.getAttr(trip, "credits", 100)
         self.setAttr(trip, "credits", min(credits + num, 100))
@@ -403,16 +413,18 @@ class Bank:
             money["nextSign"] = now() + 20 * Time.HOUR
             self.add(trip, addMoney, "每日签到")
             return f"签到成功，获得{addMoney}阿瓦豆。\n" + self.format(trip, 1)
-    def rank(self) -> str:
+    def rank(self, num: int=20) -> str:
+        if num > 50:
+            return "太多啦"
         abab = []
         for trip in self.users:
             packet = self.bank[trip]
             abab.append((trip, packet["money"], packet["name"]))
-        abab = sorted(abab, key=lambda x: x[1], reverse=True)[:26]
+        abab = sorted(abab, key=lambda x: x[1], reverse=True)[:num+1]
         result = ["### 排行"]
         rank = 0
         for trip, num, name in abab:
-            result.append(f"{rank}\\. **{name}**({trip})：{num}")
+            result.append(f"{rank}\\. **{name}**({trip})：{num:,}")
             rank += 1
         return "\n".join(result)
     def sendPacket(self, trip: str, money: int, people: int) -> str:
@@ -495,21 +507,25 @@ class Bank:
         if not money:
             return ""
         if level == 3:
-            return str(money["money"])
+            return f"{money['money']:,}"
         elif level == 2:
-            return f"余额**{money['money']}**阿瓦豆。"
+            return f"余额**{money['money']:,}**阿瓦豆。"
         elif level == 1:
-            return f"当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']}**阿瓦豆。"
+            return f"当前累计签到{money['sign']}天，连续签到{money['remain']}天，余额**{money['money']:,}**阿瓦豆。"
         else:
-            return "\n".join([
+            msgs = [
                 f"### {money['name']}({trip})",
                 f"当前累计签到{money['sign']}天，连续签到{money['remain']}天",
-                f"信用分{self.getAttr(trip, 'credits', 100)}",
-                f"余额**{money['money']}**阿瓦豆。",
-                "",
-                "---",
-                self.get_reasons(trip)
-            ])
+                # f"信用分{self.getAttr(trip, 'credits', 100)}",
+                f"余额**{money['money']:,}**阿瓦豆。",
+                ""
+            ]
+            if level < 0:
+                msgs.extend([
+                    "---",
+                    self.get_reasons(trip)
+                ])
+            return "\n".join(msgs)
     def random_id(self, length: int=6) -> str:
         loan_id = randomStr(length)
         while loan_id in self.loans:
@@ -526,10 +542,137 @@ class Bank:
                 users.append(packet["name"] + "：" + trip)
         return "\n".join(users)
 
-class Shop:
-    pass
+class Stock:
+    heartbeat = Time.MINUTE * 2
+    def __init__(self, bank: dict):
+        self.stocks: list[dict[str, int | dict]] = bank.setdefault("stocks", [])
+        self.next_update = now() + self.heartbeat
+    
+    def new_stock(self, scale=0):
+        num = random.random()
+        if not scale:
+            scale = round(random.uniform(0.01, 0.5), 2)
+        if num > 0.66:
+            init = random.randint(10, 30)
+        elif num > 0.33:
+            init = random.randint(100, 300)
+        else:
+            init = random.randint(1000, 3000)
+        self.stocks.append({
+            "name": random_design(),
+            "init": init,
+            "last": init,
+            "now": init,
+            "scale": scale,
+            "investors": {}
+        })
+
+    def up_or_down(self, stock: dict, level: int=0) -> str:
+        last = stock["last"]
+        now = stock["now"]
+        if now > last:
+            if level == 1:
+                return "↑" + str(round(now - last, 2))
+            else:
+                return "↑ +" + str(round(now - last, 3))
+        elif now < last:
+            if level == 1:
+                return "↓" + str(round(last - now, 2))
+            else:
+                return "↓ -" + str(round(last - now, 3))
+        else:
+            return "→"
+
+    def check_stocks(self, trip: str, level: int=0) -> str:
+        msgs = [
+            f"距下次更新还有{timeDiff(self.next_update - now())}",
+            "",
+            "---"
+        ]
+        for code, stock in enumerate(self.stocks):
+            if not bank.get(trip):
+                owned = 0
+            else:
+                owned = stock["investors"].get(bank.get(trip, True), 0)
+            if level == 1:
+                msgs.append(f"{stock['name']}#{code+1}: **{stock['now']:,}**awb {self.up_or_down(stock, level)}")
+                msgs.append(f"? {stock['scale']} ! {round(stock['init'] * 0.1, 2)} ({owned:,})")
+                msgs.append("[]()")
+            else:
+                msgs.extend([
+                    f"### {stock['name']}(序号{code+1})",
+                    f"当前股价: **{stock['now']:,}**豆/支 " + self.up_or_down(stock),
+                    f"浮动：{stock['scale']}",
+                    f"强平线：{round(stock['init'] * 0.1, 3)}",
+                    f"你持有{owned:,}支",
+                    "",
+                    "---"
+                ])
+        return "\n".join(msgs)
+
+    def update_stocks(self) -> str:
+        dead = []
+        msg = ""
+        for i, stock in enumerate(self.stocks):
+            price = stock["now"]
+            init = stock["init"]
+            scale = stock["scale"]
+            change = np.random.normal(-scale**2 / 2, scale)
+
+            stock["last"] = price
+            stock["now"] = round(price * math.exp(change), 3)
+
+            if stock["now"] < 0.1 * init:
+                msg += f"「{stock['name']}」的股价跌破10%，已强制平仓\n"
+                for investor, num in stock["investors"].items():
+                    self.sell_stock(investor, i, num)
+                self.new_stock()
+                dead.append(i)
+        
+        for i in dead[::-1]:
+            self.stocks.pop(i)
+ 
+        self.next_update = now() + self.heartbeat
+        bank.save()
+        return msg
+
+    def buy_stock(self, trip: str, code: int, num: int) -> str:
+        stock = self.stocks[code]
+        total_price = num * stock["now"]
+        trip = bank.get(trip, True)
+        owned = stock["investors"].get(trip, 0)
+
+        if num < 1:
+            return "你在干什么"
+        if bank.getAttr(trip, "money") < total_price:
+            return "你的钱数不足以买那么多支"
+        
+        stock["investors"][trip] = owned + num
+        bank.delete(trip, total_price, f"买入股票「{stock['name']}」")
+        bank.save()
+        return f"买入成功，花费{total_price:,}豆\n" + bank.format(trip, 2)
+
+    def sell_stock(self, trip: str, code: int, num: int) -> str:
+        stock = self.stocks[code]
+        total_price = num * stock["now"]
+        trip = bank.get(trip, True)
+        owned = stock["investors"].get(trip, 0)
+
+        if num < 1:
+            return "你在干什么"
+        if owned < num:
+            return "你持有的股数不足"
+
+        stock["investors"][trip] = owned - num
+        bank.add(trip, total_price, f"卖出股票「{stock['name']}」")
+
+        if owned == 0:
+            del stock["investors"][trip]
+        bank.save()
+        return f"卖出成功，获得{total_price:,}豆\n" + bank.format(trip, 2)
+
 
 money = readJson("money")
 
 bank = Bank(money)
-shop = Shop()
+stock = Stock(money)

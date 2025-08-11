@@ -1,1 +1,1 @@
-from .bank import bank, shop, LoanStatus
+from .bank import bank, stock, LoanStatus

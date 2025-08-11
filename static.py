@@ -21,7 +21,7 @@ MENUMIN = "\n".join([
     f">前缀=={PREFIX}==:",
     "status, hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot, uwu, kkme",
     "阿瓦豆:",
-    "regst, sign, bank, rank, v, packet, aka, borrow, lend, reject, repay, store, loans",
+    "regst, sign, bank, rank, v, packet, aka, borrow, lend, reject, repay, store, loans, stock",
     "无前缀:",
     "r, rollen, rprime, time, today, 游戏",
     "",
@@ -215,15 +215,15 @@ COMMANDS = {
         "# BANK:",
         "||",
         "|:-:|",
-        "|参数: 无|",
-        "|描述: 查看自己的银行|",
+        "|参数: ?full|",
+        "|描述: 查看自己的银行，加full则查看明细|",
     ]),
     "rank": "\n".join([
         "# RANKing List:",
         "||",
         "|:-:|",
-        "|参数: 无|",
-        "|描述: 查看排行榜|",
+        "|参数: ?<数量>|",
+        "|描述: 查看排行榜前<数量>位，默认20|",
     ]),
     "v": "\n".join([
         "# giVe:",
@@ -298,6 +298,15 @@ COMMANDS = {
         "|参数: <豆数>|",
         "|描述: 以债务形式储存豆子|",
         f"|例: {PREFIX}store 999|",
+    ]),
+    "stock": "\n".join([
+        "# STOCK Trading:",
+        "||",
+        "|:-:|",
+        "|参数: <序号> +/- <数量>|",
+        "|描述: 买入或卖出股票，不加参数查看股价，加full查看详细股价|",
+        f"|例: {PREFIX}stock 1 + 233|",
+        "|注: 每2分钟更新一次，股价低于上市价10%时会强制平仓|"
     ]),
 
     "st": "\n".join([
@@ -627,7 +636,36 @@ ERRORMSG = [
     "This is not how this works, or how any of this works.",
     "Dunno that command, try typing with your other cheeck.",
     "I've never seen this man in my life. . .",
+    "the filthy commoner. . ."
 ]
+HAX = [
+    "The VGA matrix is down, back up the virtual feed so we can synthesize the UDP driver!",
+    "The SAS capacitor is down, program the solid state application so we can program the XSS interface!",
+    "The CLI bandwidth is down, synthesize the online firewall so we can synthesize the COM application!",
+    "The HDD protocol is down, input the online transmitter so we can index the HTTP interface!",
+
+    "If we compress the capacitor, we can get to the HEX system through the redundant PCI capacitor!",
+    "If we parse the matrix, we can get to the JBOD system through the haptic XML interface!",
+    "If we reboot the application, we can get to the TLS microchip through the multi-byte EXE program!",
+
+    "I'll connect the multi-byte TLS card, that should interface the SMTP interface!",
+    "I'll input the mobile COM microchip, that should driver the RSS capacitor!",
+    "I'll copy the back-end FTP driver, that should array the SSL alarm!",
+
+    "indexing the application won’t do anything, we need to calculate the neural XML port!",
+    "generating the protocol won’t do anything, we need to transmit the back-end SMTP card!",
+    "programming the matrix won’t do anything, we need to synthesize the bluetooth TCP transmitter!",
+
+    "Try to generate the PNG firewall, maybe it will hack the primary circuit!",
+    "Use the optical SSD bus, then you can connect the virtual microchip!",
+    "Use the redundant SQL circuit, then you can transmit the open-source feed!",
+
+    "You can’t index the program without copying the redundant JBOD feed!",
+    "You can’t connect the monitor without transmitting the optical SCSI sensor!",
+
+    "We need to synthesize the mobile CLI sensor!"
+]
+
 MOTD = [
     "**Welcome to lounge, have a rest uwu**",
     "Most folks here are Chinese (active 8:00-0:00 UTC+8), but we're totally English-friendly!",
@@ -710,7 +748,7 @@ def chatApi(msg) -> str:
         return "寄了"
     else:
         cache = cont["content"].replace("菲菲", NAME).replace("{br}", "\n")
-        return cache.replace("help", f"==@{NAME} help==，==菜单==或==@{NAME} 帮助==")
+        return cache.replace("help", "==@awa_ya help==，==菜单==或==@awa_ya 帮助==")
 ## 自定义回复
 def reply(sender: str, msg: str, api: bool=True) -> str:
     for ques, ans in answer.items():
@@ -783,7 +821,7 @@ def ftime(seconds, format_="%Y-%m-%d %H:%M:%S") -> str:
 ## 检验字符串规范
 def verify(type_, text):
     if type_ == "nick":
-        return re.match(r"^@?[\w]{1,24}$", text)
+        return re.match(r"^@?[A-Za-z0-9_]{1,24}$", text)
     elif type_ == "trip":
         return re.match(r"^[A-Za-z0-9+/]{6}$", text)
     elif type_ == "hash":
@@ -860,6 +898,64 @@ def loliNum(num: int) -> str:
 def randomStr(length: int=6) -> str:
     chars = string.ascii_letters + string.digits
     return "".join(random.choices(chars, k=length))
+## 又回来了
+def random_design(num: int=1) -> str:
+    lol = []
+    for _ in range(num):
+        constraint = random.choice(design["constraints"])
+        item = random.choice(design["items"])
+        lol.append(constraint + item)
+    return "\n".join(lol)
+## 学习使我快乐
+def word_trans(word: str) -> str:
+    try:
+        cont = requests.get(f"https://v2.xxapi.cn/api/englishwords?word={word}", timeout=10).json()
+        if cont["code"] != 200:
+            return cont["msg"]
+        else:
+            cont = cont["data"]
+    except:
+        return "API暂时坏掉了"
+    else:
+        phrases = []
+        rel_words = []
+        sentences = []
+        synonyms = []
+        translations = []
+        ukphone = cont["ukphone"]
+        usphone = cont["usphone"]
+        
+        for translation in cont["translations"]:
+            translations.append(f"【{translation['pos']}.】{translation['tran_cn']}")
+        if "phrases" in cont:
+            for phrase in cont["phrases"]:
+                phrases.append(f"{phrase['p_content']}: {phrase['p_cn']}")
+        if "relWords" in cont:
+            for related in cont["relWords"]:
+                for word_ in related["Hwds"]:
+                    rel_words.append(word_["hwd"])
+        if "synonyms" in cont:
+            for synonym in cont["synonyms"]:
+                for word_ in synonym["Hwds"]:
+                    synonyms.append(word_["word"])
+        if "sentences" in cont:
+            for sentence in cont["sentences"]:
+                sentences.append(sentence["s_content"])
+                sentences.append(sentence["s_cn"])
+
+        return "\n".join([
+            f"### {word}",
+            f"英音:/{ukphone}/ 美音:/{usphone}/",
+            "**释义：**",
+            *translations,
+            "**短语：**",
+            *phrases,
+            "同根词：" + ", ".join(rel_words),
+            "近义词：" + ", ".join(synonyms),
+            "**例句：**",
+            *sentences
+        ])
+    
 
 # 玩类玩的
 ## 时间秒数
@@ -1045,7 +1141,7 @@ class Lefter:
                 self.msg[type_][to] = []
             self.msg[type_][to].append([sender, senderTrip, now(), text])
             self._writeJson()
-            return "留言成功~"
+            return f"向{type_}为{to}的用户留言成功~"
     def check(self, **kwargs) -> str:
         k24 = []
         for type_, to in kwargs.items():
@@ -1064,10 +1160,13 @@ class Lefter:
         save_need = False
         for _, to in self.msg.items():
             for key, value in to.copy().items():
-                for i, wtf in enumerate(value.copy()):
+                i = 0
+                for wtf in value.copy():
                     if wtf[2] + Time.MONTH < now():
                         value.pop(i)
+                        i -= 1
                         save_need = True
+                    i += 1
                 if not value:
                     del to[key]
                     save_need = True
@@ -1382,6 +1481,7 @@ userData = readJson("userData")
 replys = readJson("reply")
 answer = readJson("answer")
 msgCount = readJson("msgCount")
+design = readJson("design")
 
 # 半常量
 AUTH, MOD = info["auth"], info["mod"]
@@ -1408,7 +1508,7 @@ welcome = userData["welText"]
 
 msgRl = RateLimiter(20, 13)
 joinRl = RateLimiter(5, 7)
-wordRl = RateLimiter(30, 3)
+wordRl = RateLimiter(30, 2)
 setuRl = RateLimiter(40, 5)
 left = Lefter(userData["leftMsg"])
 sawer = Sawer(userData["lastSaw"])
@@ -1422,10 +1522,12 @@ lineReply = {
     # 纪念零姬……
     "0.0": ["0.0.0", ".0.", ";0;"],
     "游戏": ["\n".join([
-        "象棋(cc), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g)",
+        "象棋(cc), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g), wordle(w), 蛇棋(sl), 大富翁(ru)",
         "扑克(p), 猜单双(oe), 炸金花(z), 21点(bj)",
-        "发送`<前缀> help`获取对应帮助"
+        "发送`<前缀> help`获取对应帮助",
+        "例: u help"
     ])],
+    " /hax": HAX,
 
     "time": getTime,
     "today": historyToday,
