@@ -8,6 +8,7 @@ WORDLEMENU = "\n".join([
     "Wordle!",
     "w start: 开始游戏",
     "   - w start !: 严格模式",
+    "   - w start !!: 困难模式，只返回A(🟩)与B(🟨)的个数，不显示具体字母",
     "w <word>: 猜词",
     "w .: 查看局势",
     "w hint: 提示",
@@ -60,12 +61,42 @@ class Word:
                 letter_count[letter] -= 1
         # 再判断是否位置错误
         for (i, letter) in enumerate(self.word):
-            if letter in letter_count and letter_count[letter] and self.mask[i] == self.WRONG:
+            if letter_count.get(letter) and self.mask[i] == self.WRONG:
                 self.mask[i] = self.HALF_CORRECT
                 letter_count[letter] -= 1
                 
-        if all(mask == self.CORRECT for mask in self.mask):
+        if answer == self.word:
             self.solved = True
+
+class WordHard(Word):
+    def __init__(self, word: str):
+        super().__init__(word)
+        self.As = 0
+        self.Bs = 0
+
+    def __str__(self):
+        return f"{self.word} -> {self.As}A{self.Bs}B"
+    
+    def compare(self, answer: str):
+        letter_count: dict[str, int] = {}
+        for letter in set(answer):
+            letter_count[letter] = answer.count(letter)
+
+        # 先判断是否完全正确
+        for (i, letter) in enumerate(self.word):
+            if answer[i] == letter:
+                self.mask[i] = self.CORRECT
+                self.As += 1
+                letter_count[letter] -= 1
+        # 再判断是否位置错误
+        for (i, letter) in enumerate(self.word):
+            if letter_count.get(letter) and self.mask[i] == self.WRONG:
+                self.Bs += 1
+                letter_count[letter] -= 1
+
+        if answer == self.word:
+            self.solved = True
+
 
 class Wordle:
     def __init__(self):
@@ -73,6 +104,7 @@ class Wordle:
         self.status: int = 0
 
         self.strict: bool = False
+        self.hardmode: bool = False
 
         self.answer: str
         self.life: int
@@ -88,6 +120,10 @@ class Wordle:
             self.strict = False
         elif mode == 1:
             self.strict = True
+        elif mode == 2:
+            self.hardmode = True
+            self.life = 15
+
         with open("files/word_bank.txt") as f:
             WORD_BANK = f.readlines()
             self.answer = random.choice(WORD_BANK).strip()
@@ -104,7 +140,10 @@ class Wordle:
                 self.context.appText(f"{msg} 已经猜过了")
                 return
 
-        word = Word(msg)
+        if self.hardmode:
+            word = WordHard(msg)
+        else:
+            word = Word(msg)
         
         if self.strict and self.history:
             last_word = self.history[-1]
@@ -149,6 +188,7 @@ class Wordle:
         self.context.appText(word_trans(self.answer))
         
         self.status = 0
+        self.hardmode = self.strict = False
 
     def format(self) -> str:
         lines = [str(word) for word in self.history]
@@ -193,18 +233,21 @@ class Wordle:
 
     def check(self) -> str:
         data = self.get_types()
+        if self.hardmode:
+            unused = "现在是困难模式"
+        else:
+            unused = " ".join(sorted(data['unused']))
         return "\n".join([
             self.format(),
             "",
             "---",
-            "未使用字母: " + " ".join(sorted(data['unused']))
+            "未使用字母: " + unused
         ])
-        
 
 def to_fullwidth(s: str):
     return s.translate(str.maketrans(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-        "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "０１２３４５６７８９ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
     ))
 
 def main(context: Awaish, sender: str, msg: str):
@@ -219,12 +262,15 @@ def main(context: Awaish, sender: str, msg: str):
             wordle.start()
         elif msg_list[1] == "!":
             wordle.start(1)
+        elif msg_list[1] == "!!":
+            wordle.start(2)
     elif msg_list[0] == "?":
         if len(msg_list) < 2:
             return
         context.appText(word_trans(msg_list[1]))
     elif wordle.status:
         if msg == ".":
+            context.appText(f"还剩{wordle.life}次机会\n\n---")
             context.appText(wordle.check())
         elif msg == "end":
             wordle.end()

@@ -68,6 +68,9 @@ class OddEven:
             total_change = 0
             i = 0
             for _ in range(times):
+                if bank.getAttr(trip, "money") < money:
+                    msgs.append("你没有那么多钱……") 
+                    break
                 i += 1
                 data = self.quick(money, probability)
                 i_change = data["change"]

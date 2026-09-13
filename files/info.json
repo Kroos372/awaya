@@ -8,12 +8,12 @@
   "name": "阿瓦娅",
 
   "prologue": [
-    "早上好。发送 菜单 以获取帮助。"
+      "![awa](https://i.gyazo.com/e479960b1f70b26aec4962977dda9715.jpg)"
   ],
   "auth": "",
   "mod": "",
 
-  "url": "",
+  "url": "https://aberia.pythonanywhere.com/awaya/",
   "token": "",
 
   "debug": false

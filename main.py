@@ -1,7 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 瓦门！
 from static import *
-from games import bomber, chess, truth, poker, uno, dryEye, countryKill, wordle, snakeLadder, richup
+from games import bomber, chess, truth, uno, dryEye, countryKill, wordle, snakeLadder, richup, poker
 from money import bank, stock, LoanStatus, oddEven, zhaJinHua, blackjack
 
 # OOP, 但不完全OOP
@@ -107,7 +107,12 @@ class Awaya:
 
             if sysList[1]:
                 try:
-                    self.sendMsg(CLOCKS[hour])
+                    self.sendMsg("\n".join([
+                        CLOCKS[hour],
+                        "",
+                        "---",
+                        f"**{ader.get()}**"
+                    ]))
 
                     if hour > 12:
                         ampm = f"{hour - 13}-{hour - 12} p.m."
@@ -288,6 +293,7 @@ class Awaya:
         sec = now() + sec
         if sec > sysList[7]:
             sysList[7] = sec
+            requests.post(RL_URL, data={"token": TOKEN, "is_rl": True}, timeout=10)
             while sysList[2]:
                 if now() > sec:
                     sysList[2] = False
@@ -295,6 +301,8 @@ class Awaya:
                     break
                 else:
                     time.sleep(1)
+            else:
+                requests.post(RL_URL, data={"token": TOKEN, "is_rl": False}, timeout=10)
     # 日志
     def log(self, text):
         with open(f"logs/{self.channel}_{sysList[3]}.txt", "a+", encoding="utf8") as f:
@@ -318,7 +326,11 @@ class Awaya:
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
             self.kick(sender)
         for word in banWords:
-            if re.search(word, msg) and wordRl.frisk(hash_, 1):
+            try:
+                matched = re.search(word, msg)
+            except re.error:
+                continue
+            if matched and wordRl.frisk(hash_, 1):
                 wordRl.records[hash_]["score"] = wordRl.threshold / 2
                 self.kick(sender)
     # 踢
@@ -359,6 +371,7 @@ class Awaya:
                 self.returns = True
     def premade(self, msg: str, sender: str, trip: str, type_: str, **kwargs):
         user = self.users.getUser(sender)
+        msg_list = msg.split(" ")
         if type_ != "whisper":
             # rl
             self.rl(sender, msg)
@@ -367,7 +380,7 @@ class Awaya:
                 self.peeper.push(sender, msg, kwargs.get("customId"), kwargs.get("userid"))
                 hourCount.add(sender)
             # 随机复读
-            if 2 < len(msg) and len(msg) < 256:
+            if 2 < len(msg) and len(msg) < 256 and not disrepeat.check(**user):
                 sysList[9].append(msg)
         elif trip not in whiteList:
             # 私信rl更严
@@ -390,86 +403,80 @@ class Awaya:
                 else:
                     self.appText(random.choice(ERRORMSG))
             elif command == "addb":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
                         self.appText("参数错误")
                     else:
                         self.appText(black.add("hash", hash_))
                 else:
-                    self.appText(black.add(bloods[1], namePure(bloods[2])))
+                    self.appText(black.add(msg_list[1], namePure(msg_list[2])))
             elif command == "delb":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
                         self.appText("参数错误")
                     else:
                         self.appText(black.delete("hash", hash_))
-                elif len(bloods) > 3:
-                    for attr in bloods[2:]:
-                        black.delete(bloods[1], namePure(attr))
+                elif len(msg_list) > 3:
+                    for attr in msg_list[2:]:
+                        black.delete(msg_list[1], namePure(attr))
                     self.appText("阿瓦一下")
                 else:
-                    self.appText(black.delete(bloods[1], namePure(bloods[2])))
+                    self.appText(black.delete(msg_list[1], namePure(msg_list[2])))
             elif command == "igno":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     self.appText(ignore.add("nick", namePure(msg[6:])))
                 else:
-                    self.appText(ignore.add(bloods[1], namePure(bloods[2])))
+                    self.appText(ignore.add(msg_list[1], namePure(msg_list[2])))
             elif command == "unig":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     self.appText(ignore.delete("nick", namePure(msg[6:])))
-                elif len(bloods) > 3:
-                    for attr in bloods[2:]:
-                        ignore.delete(bloods[1], namePure(attr))
+                elif len(msg_list) > 3:
+                    for attr in msg_list[2:]:
+                        ignore.delete(msg_list[1], namePure(attr))
                     self.appText("阿瓦一下")
                 else:
-                    self.appText(ignore.delete(bloods[1], namePure(bloods[2])))
+                    self.appText(ignore.delete(msg_list[1], namePure(msg_list[2])))
             elif command == "bans":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     return self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     hash_ = self.users.getAttr(namePure(msg[6:]), "hash")
                     if hash_ is None:
                         return self.appText("参数错误")
                     else:
-                        bloods[1] = "hash"
-                        bloods.append(hash_)
-                attr = namePure(bloods[2])
-                nicks = self.users.attrsGet(bloods[1], attr)
+                        msg_list[1] = "hash"
+                        msg_list.append(hash_)
+                attr = namePure(msg_list[2])
+                nicks = self.users.attrsGet(msg_list[1], attr)
                 if nicks:
                     assert_ = self.kick(*nicks, assert_=True)
                     if assert_:
-                        self.appText(banned.add(bloods[1], attr))
+                        self.appText(banned.add(msg_list[1], attr))
                     else:
                         self.appText("6")
                 else:
-                    self.appText(banned.add(bloods[1], attr))
+                    self.appText(banned.add(msg_list[1], attr))
             elif command == "uban":
-                bloods = msg.split()
-                if len(bloods) < 2:
+                if len(msg_list) < 2:
                     self.appText("缺少参数")
-                elif len(bloods) < 3:
+                elif len(msg_list) < 3:
                     self.appText(banned.delete("hash", msg[6:]))
-                elif len(bloods) > 3:
-                    for attr in bloods[2:]:
-                        banned.delete(bloods[1], namePure(attr))
+                elif len(msg_list) > 3:
+                    for attr in msg_list[2:]:
+                        banned.delete(msg_list[1], namePure(attr))
                     self.appText("阿瓦一下")
                 else:
-                    self.appText(banned.delete(bloods[1], namePure(bloods[2])))
+                    self.appText(banned.delete(msg_list[1], namePure(msg_list[2])))
             elif command == "repl":
                 _000 = msg.split(" ")
                 if len(_000) < 3 or not _000[1]:
@@ -486,7 +493,7 @@ class Awaya:
             elif command == "kill":
                 self.kick(*msg[6:].split())
             elif command == "gnkey":
-                key = getStr()
+                key = randomStr(10)
                 keys[trip] = key
                 writeJson("userData", userData)
                 self.appText("\n".join([
@@ -511,18 +518,17 @@ class Awaya:
             elif command == "unlock":
                 self.appText(".m unlockroom", "part")
             elif command == "setrl":
-                op = msg.split()
-                if op[-1] == "word":
+                if msg_list[-1] == "word":
                     setRl = wordRl
-                elif op[-1] == "join":
+                elif msg_list[-1] == "join":
                     setRl = joinRl
-                elif op[-1] == "setu":
+                elif msg_list[-1] == "setu":
                     setRl = setuRl
                 else:
                     setRl = msgRl
                 try:
-                    setRl.halflife = int(op[1])
-                    setRl.threshold = int(op[2])
+                    setRl.halflife = int(msg_list[1])
+                    setRl.threshold = int(msg_list[2])
                 except:
                     pass
                 self.appText(f"halflife: {setRl.halflife}, threshold: {setRl.threshold}")
@@ -552,20 +558,19 @@ class Awaya:
                     self.appText("暂不支持私信, 果咩捏")
                 else:
                     # List? kita kita~
-                    cid = getStr(6)
+                    cid = randomStr(6)
                     self.appText("桥豆麻袋", "part", cid=cid)
                     kita = ListChat(lChannel, cid, self.passwd)
                     self.updateFunc(kita.rock, cid)
             elif command == "room":
                 lChannel = msg[6:] or self.channel
-                cid = getStr(6)
+                cid = randomStr(6)
                 self.appText("桥豆麻袋", "part", cid=cid)
                 kita = RoomChat(lChannel, cid, self.nick)
                 self.updateFunc(kita.rock, cid)
             elif command == "bomb":
-                sp = msg.split()
                 try:
-                    mini, maxi = int(sp[1]), int(sp[2])
+                    mini, maxi = int(msg_list[1]), int(msg_list[2])
                 except:
                     return self.appText(f"输入格式有误，请在{WHTFIX}bomb 后面用空格隔开，输入最小值和最大值两个整数！")
                 if (maxi-mini) < 1:
@@ -575,7 +580,7 @@ class Awaya:
                     self.appText("设置成功！")        
             elif command == "fun":
                 try:
-                    sysList[10] = int(msg.split()[1])
+                    sysList[10] = int(msg_list[1])
                 except (IndexError, TypeError):
                     self.appText(f"参数有误，请输入数字")
                 else:
@@ -605,6 +610,35 @@ class Awaya:
                         if trip_ in bank.wait:
                             bank.register(trip_)
                     self.appText("耶！")
+            elif command == "unre":
+                if len(msg_list) < 2:
+                    self.appText("缺少参数")
+                elif len(msg_list) < 3:
+                    self.appText(disrepeat.add("nick", namePure(msg[6:])))
+                else:
+                    self.appText(disrepeat.add(msg_list[1], namePure(msg_list[2])))
+            elif command == "repeat":
+                if len(msg_list) < 2:
+                    self.appText("缺少参数")
+                elif len(msg_list) < 3:
+                    self.appText(disrepeat.delete("nick", namePure(msg[6:])))
+                elif len(msg_list) > 3:
+                    for attr in msg_list[2:]:
+                        disrepeat.delete(msg_list[1], namePure(attr))
+                    self.appText("阿瓦一下")
+                else:
+                    self.appText(disrepeat.delete(msg_list[1], namePure(msg_list[2])))
+            elif command == "ads":
+                if len(msg_list) < 3:
+                    self.appText(ader.check(), "whisper", to=sender)
+                elif msg_list[1] == "-":
+                    try:
+                        self.appText(ader.delete(int(msg_list[2])))
+                    except:
+                        self.appText("错了")
+                else:
+                    self.appText(ader.add(" ".join(msg_list[2:])))
+
         elif msg[0] == OWNFIX and trip in OWNER:
             command = command[1:]
             if command == "help":
@@ -900,7 +934,7 @@ class Awaya:
                 elif type_ == "whisper":
                     self.appText("别私信乐")
                 elif not sysList[2]:
-                    cid = getStr(6)
+                    cid = randomStr(6)
                     self.appText("少女祈祷中. . .", "part", cid=cid)
                     self.updateFunc(colorPic, cid, msg[6:])
             elif command == "prime":
@@ -971,7 +1005,7 @@ class Awaya:
             elif command == "sign":
                 self.appText(bank.sign(trip))
             elif command == "bank":
-                if len(msg_list) > 2:
+                if len(msg_list) > 1 and bank.get(msg_list[1]):
                     trip = msg_list.pop(1)
                 if len(msg_list) < 2:
                     self.appText(bank.format(trip))
@@ -1240,6 +1274,7 @@ class Awaya:
         self.nicks.append(joiner)
         self.users.addUser(**result)
         self.looker.addUser(joiner)
+        sawer.add(joiner, trip, "")
         hasher.addHash(joiner, result["hash"])
         
         # if self.motded:
@@ -1269,9 +1304,9 @@ class Awaya:
 
         if not ignore.check(**result):
             hourCount.add(joiner)
-        sawer.addUser(joiner, self.users.getAttr(joiner, "trip"), True)
         self.whisper(joiner, left.check(**result))
         self.rl(joiner, "", 1)
+
     def onLeave(self, leaver: str):
         self.log(f"{leaver} 离开")
         self.nicks.remove(leaver)
@@ -1293,8 +1328,8 @@ class Awaya:
         for user in result["users"]:
             nick, hash_ = user["nick"], user["hash"]
 
+            sawer.add(nick, user["trip"], "")
             self.users.addUser(**user)
-            sawer.addUser(nick, user["trip"], True)
             self.looker.addUser(nick)
             hasher.addHash(nick, hash_)
 

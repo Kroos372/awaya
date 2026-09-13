@@ -27,35 +27,37 @@ POKERRULE = "\n".join([
 ])
 
 class Card:
-    NUMS = ["3", "4", "5", "6", "7", "8", "9", "H", "J", "Q", "K", "A", "2"]
+    NUMS = ["3", "4", "5", "6", "7", "8", "9", "H", "J", "Q", "K", "A", "2"] # 0-12
     JOKERS = ["小", "大"]
     SORT = NUMS + JOKERS
 
 class ReType:
-    MULT_SINGLE = re.compile(r"^[2-9HJQKA]\*[23]$")
-    STRAIGHT = re.compile(r"^[3-9HJQKA]-[3-9HJQKA](\*[23]|)$")
-    THREE_WITH = re.compile(r"^[2-9HJQKA]\*3 ([2-9HJQKA大小])\1?$")
-    PLANE = re.compile(r"[3-9HJQKA]-[3-9HJQKA]\*3(?: ([2-9HJQKA大小])\1?)+$")
-    FOUR_WITH = re.compile(r"^[2-9HJQKA]\*4(?: ([2-9HJQKA大小])\1?){2}")
-    BOMB = re.compile(r"^[2-9HJQKA]\*4$")
+    SINGLE = re.compile(r"^.(\*[123])?$")
+    STRAIGHT = re.compile(r"^[3-9HJQKA]-[3-9HJQKA](\*[123])?$")
+    THREE_WITH = re.compile(r"^.\*3 (.)\1?$")
+    PLANE = re.compile(r"[3-9HJQKA]-[3-9HJQKA]\*3(?: (.)\1?)+$")
+    FOUR_WITH = re.compile(r"^[2-9HJQKA]\*4(?: (.)\1?){2}")
+    BOMB = re.compile(r"^.\*4$")
 
 class SingleHand:
-    SINGLE = 1 
-    MULT_SINGLE = 2
-    STRAIGHT = 3
-    MULT_STRAIGHT = 4
-    THREE_WITH = 5
-    PLANE = 6
-    FOUR_WITH = 7
-    BOMB = 8
-    ROCKET = 9
+    SINGLE = 1
+    STRAIGHT = 2
+    THREE_WITH = 3
+    PLANE = 4
+    FOUR_WITH = 5
+    BOMB = 6
+    ROCKET = 7
     BOMBS = [BOMB, ROCKET]
     def __init__(self, msg: str=""):
         self.text = msg
         self.type: int | None = None
-        self.length: int = 1
-        self.withs_length: Literal[1, 2] = 1
+
+        self.length: int = 0
         self.mults: Literal[1, 2, 3] = 1
+
+        self.withs_mults: Literal[0, 1, 2] = 0
+        self.withs_length: int = 0
+
         self.all_cards: str = ""
         self.max_num: str | int
         self.msg: str = ""
@@ -77,87 +79,94 @@ class SingleHand:
     
     def _parse_type(self, msg: str):
         msg_list = msg.split(" ")
-        # 单张
-        if msg in Card.SORT:
-            self.type = self.SINGLE
-            self.all_cards = self.max_num = msg
-        # 对子、三张
-        elif ReType.MULT_SINGLE.fullmatch(msg):
-            self.type = self.MULT_SINGLE
-            self.mults = int(msg[-1])
+        # 单张、对子、三张
+        if ReType.SINGLE.fullmatch(msg):
+            if "*" in msg:
+                self.mults = int(msg[-1])
             self.max_num = msg[0]
             self.all_cards = self.max_num * self.mults
+            self.type = self.SINGLE
         # 顺子、双顺、三顺
         elif ReType.STRAIGHT.fullmatch(msg):
             if "*" in msg:
-                self.type = self.MULT_STRAIGHT
                 self.mults = int(msg[-1])
-            else:
-                self.type = self.STRAIGHT
             start, end = Card.SORT.index(msg[0]), Card.SORT.index(msg[2])
             self.length = end - start + 1
             if self.mults == 1 and self.length < 5:
                 self.msg = "顺子至少5张"
-                self.type = None
+                return
             elif self.mults == 2 and self.length < 3:
                 self.msg = "双顺至少3张"
-                self.type = None
+                return
             elif self.length < 2:
                 self.msg = "三顺至少2张"
-                self.type = None
+                return
             self.max_num = msg[2]
             for num in Card.SORT[start:end+1]:
                 self.all_cards += num * self.mults
+            self.type = self.STRAIGHT
         # 三带一、三带对
         elif ReType.THREE_WITH.fullmatch(msg):
-            self.type = self.THREE_WITH
+            self.mults = 3
+            self.withs_length = 1
+            self.withs_mults = len(msg_list[1])
             self.max_num = msg[0]
-            self.withs_length = len(msg_list[1])
             self.all_cards = self.max_num * 3 + msg_list[1]
+            self.type = self.THREE_WITH
         # 飞机
         elif ReType.PLANE.fullmatch(msg):
-            if not same_length(msg_list[1:]):
-                self.msg = "带的牌格式有误"
-                return
-            self.type = self.PLANE
+            self.mults = 3
             start, end = Card.SORT.index(msg[0]), Card.SORT.index(msg[2])
             self.length = end - start + 1
             if self.length < 2:
                 self.msg = "三顺至少2张"
-                self.type = None
+                return
+            if not same_mults(msg_list[1:], self.length):
+                self.msg = "带的牌格式有误"
+                return
+            self.withs_length = self.length
             self.max_num = msg[2]
-            self.withs_length = len(msg_list[1])
+            self.withs_mults = len(msg_list[1])
             for num in Card.SORT[start:end+1]:
                 self.all_cards += num * 3
             self.all_cards += "".join(msg_list[1:])
+            self.type = self.PLANE
         # 四带二
         elif ReType.FOUR_WITH.fullmatch(msg):
-            if not same_length(msg_list[1:]):
+            if not same_mults(msg_list[1:], 2):
                 self.msg = "带的牌格式有误"
                 return
-            self.type = self.FOUR_WITH
+            self.mults = 4
+            self.withs_length = 2
+            self.withs_mults = len(msg_list[1])
             self.max_num = msg[0]
-            self.withs_length = len(msg_list[1])
             self.all_cards = self.max_num * 4 + "".join(msg_list[1:])
+            self.type = self.FOUR_WITH
         # 炸弹
         elif ReType.BOMB.fullmatch(msg):
-            self.type = self.BOMB
             self.mults = 4
             self.max_num = msg[0]
             self.all_cards = self.max_num * 4
+            self.type = self.BOMB
         # 王炸
         elif msg == "王炸":
-            self.type = self.ROCKET
             self.all_cards = "大小"
             self.max_num = "大"
+            self.type = self.ROCKET
 
 # 带多的带的是否为同长度(对或单)
-def same_length(seq: list[str]) -> bool:
+def same_mults(seq: list[str], require_length: int=2) -> bool:
+    if len(seq) != require_length:
+        return False
     length = len(seq[0])
     for i in seq[1:]:
         if len(i) != length:
             return False
     return True
+
+# 数值转字符
+def cardify(*nums) -> str:
+    return "-".join(Card.SORT[num] for num in nums)
 
 class Player:
     is_bot: bool
@@ -178,46 +187,91 @@ class Player:
 class Human(Player):
     is_bot = False
 
-class Hand(list):
-    def __init__(self, *args):
-        super().__init__(*args)
 
-class AutoBot(Player):
-    is_bot = True
-    def __init__(self, name, trip):
-        super().__init__(name, trip)
-        # self.cards = Hand()
-        self.pass_all = False
-        self.types: dict[str | int, list | bool]
+class Hand(list):
+    def __init__(self, bot: "AutoBot", *args):
+        super().__init__(*args)
+        self.types: dict[str, list]
+        self.bot = bot
+
+    # 选择合适牌型
+    def play_type(self, type_: SingleHand, follow: bool=False) -> str:
+        my_types = self.types
+        text = ""
+        withs = []
+        try:
+            if type_.withs_length:
+                if follow:
+                    for _ in range(type_.withs_length):
+                        withs.append(my_types[type_.withs_mults].pop())
+                elif len(my_types[2]) >= type_.withs_length:
+                    for _ in range(type_.withs_length):
+                        withs.append(my_types[2].pop())
+                elif len(my_types[1]) >= type_.withs_length:
+                    for _ in range(type_.withs_length):
+                        withs.append(my_types[1].pop())
+            else:
+                text = self.pop_type(type_, follow)
+
+            if withs:
+                text += " " + " ".join(withs)
+            return text
+        except (IndexError, KeyError):
+            return "."
+    # 更细致
+    def pop_type(self, type_: SingleHand, follow: bool=False) -> str:
+        my_types = self.types
+        if not type_.length:
+            cards = my_types[type_.mults]
+            if not follow:
+                return cards.pop()
+            for num in cards:
+                if num > type_.max_num:
+                    return cardify(num) + "*" + type_.mults
+            raise IndexError
+        # 顺子
+        else:
+            starights: list[tuple[int, int]] = my_types["straight"][type_.mults]
+            if not follow:
+                return starights.pop()
+            for start, length in starights:
+                end = start + length - 1
+                if end > type_.max_num and length >= type_.length:
+                    start = end - type_.length + 1
+                    return cardify(start, end) + "*" + type_.mults
 
     def get_types(self) -> dict:
-        setCards = set(self.cards)
-        allType = {
+        setCards = set(self)
+        types: dict[str, list] = {
             1: [],
             2: [],
             3: [],
-            4: [],
-            "st": self._get_straights(setCards, 5)
+            4: []
         }
         
         for card in setCards:
-            allType[self.cards.count(card)].append(card)
+            for i in self.count(card):
+                types[i].append(Card.SORT.index(card))
+            # types[self.count(card)].append(card)
         for i in range(1, 5):
-            allType[i].sort(key=lambda x: Card.SORT.index(x))
+            types[i].sort()
 
-        allType["2st"] = self._get_straights(allType[2], 3)
-        allType["3st"] = self._get_straights(allType[3], 2)
+        types["straight"] = {
+            1: self.get_straights(types[1], 5),
+            2: self.get_straights(types[2], 3),
+            3: self.get_straights(types[3], 2)
+        }
 
-        if "大" in self.cards and "小" in self.cards:
-            allType["王炸"] = True
+        if "大" in self and "小" in self:
+            types["rocket"] = ["王炸"]
         else:
-            allType["王炸"] = False
+            types["rocket"] = []
 
-        return allType
+        return types
     
-    def _get_straights(self, cards, min_len: int) -> list[list]:
+    def get_straights(self, cards, min_len: int) -> list[list]:
         result = []
-        valids = [Card.SORT.index(i) for i in cards if i not in "2小大"]
+        valids = [i for i in cards if i < 12]
         valids.sort()
         
         if len(valids) < min_len:
@@ -228,57 +282,26 @@ class AutoBot(Player):
             if valids[i] != valids[i-1] + 1:
                 length = len(valids[start:i])
                 if length >= min_len:
-                    result.append([valids[start], length])
+                    result.append((valids[start], length))
                 start = i
         if len(valids) - start >= min_len:
-            result.append([valids[start], len(valids) - start])
+            result.append((valids[start], len(valids) - start))
 
         return result
 
-    def execute(self, player: Human, cmd: str) -> str:
-        if player.is_landlord or self.is_landlord:
-            return "只有同阵营玩家能操控bot"
-        
-        if cmd == ".":
-            self.pass_all = not self.pass_all
-            return f"设置成功，当前禁言：{self.pass_all}"
-
-    def pop_type(self, type, times: int=1) -> list:
-        types = self.types
-        if type not in types:
-            return []
-        text = []
-        # for _ in range(times):
-        #     for card in types[type]:
-        #         if card
-
-    def _first_play(self, types: dict, last_player: Human) -> str:
-        if types["3st"]:
-            start, length = types["3st"].pop(0)
-            end = Card.SORT[start + length - 1]
-            start = Card.SORT[start]
-            if len(types[1]) >= length:
-                withs = " ".join(str(types[1].pop(0)) for _ in range(length))
-                text = f"{start}-{end}*3 {withs}"
-            elif len(types[2]) >= length:
-                withs = " ".join(str(types[2].pop(0))*2 for _ in range(length))
-                text = f"{start}-{end}*3 {withs}"
-            else:
-                text = f"{start}-{end}*3"
+    def first_play(self, types: dict, last_player: Human) -> str:
+        if types["straight"][3]:
+            text = self.play_type(SingleHand("3-4*3 4 5"))
         elif types[3]:
-            three = types[3].pop(0)
-            if types[1]:
-                text = f"{three}*3 {types[1].pop(0)}"
-            elif types[2]:
-                text = f"{three}*3 {str(types[2].pop(0))*2}"
+            text = self.play_type(SingleHand("3*3 4"))
         
-        elif types["2st"]:
-            start, length = types["2st"].pop(0)
+        elif types["straight"][2]:
+            start, length = types["straight"][2].pop(0)
             end = Card.SORT[start + length - 1]
             start = Card.SORT[start]
             text = f"{start}-{end}*2"
-        elif types["st"]:
-            start, length = types["st"].pop(0)
+        elif types["straight"][1]:
+            start, length = types["straight"][1].pop(0)
             text = f"{Card.SORT[start]}-{Card.SORT[start + length - 1]}"
 
         elif types[1]:
@@ -296,16 +319,16 @@ class AutoBot(Player):
                 text = f"{types[4].pop(0)}*4"
         return text
 
-    def _follow_play(self, types: dict, last_player: Human, last_hand: SingleHand) -> str:
+    def follow_play(self, types: dict, last_player: Human, last_hand: SingleHand) -> str:
         text = ""
         max_num = last_hand.max_num
-        isFriend = not (self.is_landlord or last_player.is_landlord)
+        isFriend = not (self.bot.is_landlord or last_player.is_landlord)
         
         # 别太坑队友
         if isFriend and max_num > 10:
             text = "."
         # 单张两张三张四张
-        elif last_hand.type == SingleHand.SINGLE or last_hand.type == SingleHand.MULT_SINGLE:
+        elif last_hand.type == SingleHand.SINGLE:
             times = last_hand.mults
             if times == 4 and isFriend:
                 return "."
@@ -317,7 +340,7 @@ class AutoBot(Player):
                         text = f"{card}*{times}"
                     break
         # 顺子双顺三顺
-        elif last_hand.type == SingleHand.STRAIGHT or last_hand.type == SingleHand.MULT_STRAIGHT:
+        elif last_hand.type == SingleHand.STRAIGHT:
             times = last_hand.mults
             if times == 1:
                 sts = types["st"]
@@ -338,44 +361,59 @@ class AutoBot(Player):
                         break
         # 三带一、三带对
         elif last_hand.type == SingleHand.THREE_WITH:
-            withs_length = last_hand.withs_length
+            withs_mults = last_hand.withs_mults
             for card in types[3]:
-                if Card.SORT.index(card) > max_num and types[withs_length]:
-                    text = f"{card}*3 {types[withs_length].pop(0)*withs_length}"
+                if Card.SORT.index(card) > max_num and types[withs_mults]:
+                    text = f"{card}*3 {types[withs_mults].pop(0)*withs_mults}"
         # 四带二
         elif last_hand.type == SingleHand.FOUR_WITH and not isFriend:
-            withs_length = last_hand.withs_length
+            withs_mults = last_hand.withs_mults
             for card in types[4]:
-                if Card.SORT.index(card) > max_num and len(types[withs_length]) >= 2:
-                    text = f"{card}*4 {types[withs_length].pop(0)*withs_length} {types[withs_length].pop(0)*withs_length}"
+                if Card.SORT.index(card) > max_num and len(types[withs_mults]) >= 2:
+                    text = f"{card}*4 {types[withs_mults].pop(0)*withs_mults} {types[withs_mults].pop(0)*withs_mults}"
         # 飞机
         elif last_hand.type == SingleHand.PLANE and not isFriend:
             llength = last_hand.length
-            withs_length = last_hand.withs_length
+            withs_mults = len(last_hand.split(" ")[1])
             for start, length in types["3st"]:
                 if length >= llength:
                     rend = start + length - 1
-                    if Card.SORT[rend - llength + 1] > max_num and len(types[withs_length]) >= llength:
-                        withs = types[withs_length].pop(0)*withs_length
+                    if Card.SORT[rend - llength + 1] > max_num and len(types[withs_mults]) >= llength:
+                        withs = types[withs_mults].pop(0)*withs_mults
                         for _ in range(llength-1):
-                            withs += f" {types[withs_length].pop(0)*withs_length}"
+                            withs += f" {types[withs_mults].pop(0)*withs_mults}"
                         text = f"{Card.SORT[start]}-{Card.SORT[rend]}*{times} {withs}"
 
         return text or "."
+
+class AutoBot(Player):
+    is_bot = True
+    def __init__(self, name, trip):
+        super().__init__(name, trip)
+        self.hand = Hand(self)
+        self.pass_all = False
+
+    def execute(self, player: Human, cmd: str) -> str:
+        if player.is_landlord or self.is_landlord:
+            return "只有同阵营玩家能操控bot"
+        
+        if cmd == ".":
+            self.pass_all = not self.pass_all
+            return f"设置成功，当前禁言：{self.pass_all}"
 
     def play(self) -> str:
         if game.status == game.ROB_LANDLORD:
             return "."
 
-        self.types = self.get_types()
+        self.types = self.hand.get_types()
         # 本轮第一发
         if game.last_hand.type is None:
-            return self._first_play(self.types, game.last_player)
+            return self.hand.first_play(self.types, game.last_player)
         elif self.pass_all:
             return "."
         # 接别人的牌
         else:
-            return self._follow_play(self.types, game.last_player, game.last_hand)
+            return self.hand.follow_play(self.types, game.last_player, game.last_hand)
 
 class Poker:
     CLOSED = 0
@@ -602,7 +640,7 @@ class Poker:
 
         if last_hand.type is not None:
             if (hand.type == last_hand.type and hand.mults == last_hand.mults and
-                hand.length == last_hand.length and hand.withs_length == last_hand.withs_length):
+                hand.length == last_hand.length and hand.withs_mults == last_hand.withs_mults):
                 if hand.max_num <= last_hand.max_num:
                     self.context.appText("你的牌没有上家大")
                     return
@@ -629,7 +667,7 @@ class Poker:
             if hand.type == SingleHand.ROCKET:
                 self.last_hand = SingleHand()
                 self.context.appText(f"@{player} 继续出牌")
-                self.check_end()
+                self._check_end()
                 return
 
         self.last_hand = hand

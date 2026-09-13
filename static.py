@@ -1,6 +1,7 @@
 #coding=utf-8
 # 进源码啥都别说，先一起喊： 阿瓦！
-import json, time, math, re, websocket, requests, threading, traceback, sys, os, random, datetime, string
+import json, time, math, re, websocket, requests, threading, traceback
+import sys, os, random, datetime, string, sqlite3
 from typing import Optional, Literal
 from enum import IntEnum
 from collections import deque
@@ -14,16 +15,19 @@ TIME_ZONE = +8
 LATEXOOM = r"$\begin{pmatrix}qaq\\[20231128em]\end{pmatrix}$"
 KICK = "/kick" # 会自动加空格
 EHHH = "&zwj;"
+RL_URL = "https://aberia.pythonanywhere.com/is_awaya_being_rl/"
+DB_PATH = "files/data.db"
 
 MENUMIN = "\n".join([
     "早",
     "普通用户: ",
-    f">前缀=={PREFIX}==:",
-    "status, hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot, uwu, kkme",
+    f"前缀=={PREFIX}==:",
+    ">status, hasn, hash, code, colo, left, peep, welc, seen, look, Lori, decp, list, setu, prime, hug, shoot, uwu, kkme",
     "阿瓦豆:",
     "regst, sign, bank, rank, v, packet, aka, borrow, lend, reject, repay, store, loans, stock",
+    ""
     "无前缀:",
-    "r, rollen, rprime, time, today, 游戏",
+    ">r, rollen, rprime, time, today, 游戏",
     "",
     "白名单用户：",
     f">前缀=={WHTFIX}==:",
@@ -32,6 +36,8 @@ MENUMIN = "\n".join([
     "",
     f"发送=={PREFIX}help 命令==可获得该指令详细用法，如=={PREFIX}help help==",
     f"白名单用{WHTFIX}help",
+    f"不说话不是服务器问题就是被RL(发言频率限制)了，[点击此处查看是否被RL]({RL_URL})",
+    "---",
     "开源地址: https://github.com/Kroos372/awaya , 欢迎star～(∠・ω< )⌒★"
 ])
 OWNMENU = "\n".join([
@@ -309,17 +315,6 @@ COMMANDS = {
         "|注: 每2分钟更新一次，股价低于上市价10%时会强制平仓|"
     ]),
 
-    "st": "\n".join([
-        "# Stock Trading:",
-        "||",
-        "|:-:|",
-        "|参数: 买入/卖出/持有/行情/排行|",
-        "|描述: 炒股系统|",
-        "|例1: st 买入 100|",
-        "|例2: st 卖出 50|",
-        "|例3: st 行情|",
-        "|注: 股价每秒更新一次，有一定波动性，请谨慎投资|"
-    ]),
     "r": "\n".join([
         "# Random Integer:",
         "||",
@@ -600,7 +595,7 @@ KAWAII = [
     "sender是小天使",
     "sender最可爱了"
 ]
-# Afk_bot
+# AfK_bot
 BODY_PARTS = [
     "heart",    # 心脏
     "head",     # 头部
@@ -638,6 +633,7 @@ ERRORMSG = [
     "I've never seen this man in my life. . .",
     "the filthy commoner. . ."
 ]
+# RIP original hack.chat. . .
 HAX = [
     "The VGA matrix is down, back up the virtual feed so we can synthesize the UDP driver!",
     "The SAS capacitor is down, program the solid state application so we can program the XSS interface!",
@@ -684,7 +680,7 @@ MONTHS = [
     "Sept.",
     "Oct.",
     "Nov.",
-    "Dec"
+    "Dec."
 ]
 
 # 独立于类的函数
@@ -695,7 +691,7 @@ def _debom(cont: str) -> str:
     else:
         return cont
 ## 读文件
-def readJson(filename: str):
+def readJson(filename: str) -> dict:
     with open(f"files/{filename}.json", encoding="utf8") as f:
         data = json.loads(_debom(f.read()))
     return data
@@ -779,13 +775,6 @@ def toWeb(text):
     except:
         return text[:512] + "\n...太长了。"
     # return text[:512] + "\n...太长了。"
-## 随机字符串
-def getStr(length=16) -> str:
-    dinnerbone = ""
-    strs = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    for i in range(length):
-        dinnerbone += random.choice(strs)
-    return dinnerbone
 ## 名字提纯
 def namePure(name: str) -> str:
     return name.strip("@").strip()
@@ -896,8 +885,8 @@ def loliNum(num: int) -> str:
     return f"![{num}](https://count.getloli.com/@:name?num={abs(num)}&padding=1)\n{num}"
 ## 随机字符
 def randomStr(length: int=6) -> str:
-    chars = string.ascii_letters + string.digits
-    return "".join(random.choices(chars, k=length))
+    dinnerbone = string.ascii_letters + string.digits
+    return "".join(random.choices(dinnerbone, k=length))
 ## 又回来了
 def random_design(num: int=1) -> str:
     lol = []
@@ -1177,42 +1166,71 @@ class Lefter:
         writeJson("userData", userData)
 ## saw器
 class Sawer:
-    def __init__(self, last: dict):
-        self.last = last or {"nick": {}, "trip": {}}
-    def addUser(self, nick, trip, onSet=False):
-        time = now()
-        # 不是我说，就这个and和or，我自己都觉得天才
-        if trip:
-            self.last["nick"][nick] = trip
-            self.last["trip"][trip] = onSet and self.last["trip"].get(trip) or {"time": time, "msg": None}
-        else:
-            self.last["nick"][nick] = onSet and self.last["nick"].get(nick) or {"time": time, "msg": None}
-        self._writeJson()
-    def add(self, nick, trip, msg):
-        time = now()
-        if trip:
-            self.last["trip"][trip] = {"time": time, "msg": msg}
-        else:
-            self.last["nick"][nick] = {"time": time, "msg": msg}
-        self._writeJson()
+    def __init__(self):
+        self.table_name = "last_seen"
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS {self.table_name}_nick (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nick TEXT UNIQUE,
+                    trip TEXT,
+                    message TEXT,
+                    timestamp INTEGER
+                )""")
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS {self.table_name}_trip (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nick TEXT,
+                    trip TEXT UNIQUE,
+                    message TEXT,
+                    timestamp INTEGER
+                )""")
+
+    def add(self, nick, trip, msg, timestamp=0):
+        if not timestamp:
+            timestamp = now()
+        if len(msg) > 50:
+            msg = msg[:50] + "..."
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO {self.table_name}_nick (nick, trip, message, timestamp)
+                VALUES (?, ?, ?, ?)""", (nick, trip, msg, timestamp))
+            if trip:
+                cursor.execute(f"""
+                    INSERT OR REPLACE INTO {self.table_name}_trip (nick, trip, message, timestamp)
+                    VALUES (?, ?, ?, ?)""", (nick, trip, msg, timestamp))
+            conn.commit()
+
     def get(self, text: str, type_: str) -> str:
-        user = self.last[type_].get(text)
-        if not user:
-            return "此人还没有光顾此处的样子(◐_◑)"
-        if isinstance(user, str):
-            type_ = "trip"
-            text = user
-            user = self.last["trip"][user]
-        ltime = user["time"]
-        observer = f"最后一次见到{type_}为{text}的用户是在{ftime(ltime)}（距现在{timeDiff(now() - ltime)}）\n"
-        if user["msg"] is not None:
-            observer += f"他说了：{user['msg'][:50]}"
+        if type_ == "trip":
+            table_name = f"{self.table_name}_trip"
         else:
-            observer += "他加入了。"
-        return observer
-    def _writeJson(self):
-        userData["lastSaw"] = self.last
-        writeJson("userData", userData)
+            table_name = f"{self.table_name}_nick"
+
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            c = cursor.execute(f"""SELECT * FROM {table_name} WHERE {type_} == ?""", (text, ))
+            user: dict = c.fetchone()
+
+        if user is None:
+            return "此人还没有光顾这里_(:зゝ∠)\\_"
+
+        last_time = user["timestamp"]
+        observer = [
+            f"最后一次见到{user['nick']}是在{ftime(last_time)}（距现在{timeDiff(now() - last_time)}）",
+            f"他的识别码为{user['trip']}"
+        ]
+
+        if user["message"]:
+            observer.append(f"他说了：{user['message']}")
+        else:
+            observer.append("他加入了。")
+
+        return "\n".join(observer)
+
 ## look器
 class Looker:
     def __init__(self):
@@ -1299,7 +1317,7 @@ class ListChat:
 class Black:
     def __init__(self, name: str):
         self.name = name
-        self.data = userData[name]
+        self.data = userData.setdefault(name, {})
     def add(self, type_, to) -> str:
         if not verify(type_, to):
             return "参数不合法！"
@@ -1473,6 +1491,39 @@ class Awaish:
         ...
     def pop(self, num: int=1): ...
     def runContext(self): ...
+    def sendMsg(self, text: str, cid: str="", force: bool=False): ...
+    def whisper(self, to: str, text: str, force: bool=False): ...
+## 广告
+class Ads:
+    def __init__(self, name: str):
+        self.name = name
+        self.data: list[str] = userData.setdefault(name, [])
+    def add(self, ad: str) -> str:
+        if len(ad) > 256:
+            return "太长啦"
+        self.data.append(ad)
+        self.save()
+        return "添加成功"
+    def delete(self, index: int) -> str:
+        try:
+            ad = self.data.pop(index)
+        except:
+            return "序号错误"
+        self.save()
+        return "删除成功，删除的广告是：\n" + ad
+    def check(self) -> str:
+        bloodS = []
+        for i, ad in enumerate(self.data):
+            bloodS.append(f"{i}\\. " + ad[:50].replace("\n", " "))
+        return "\n".join(bloodS)
+    def get(self) -> str:
+        if self.data:
+            return random.choice(self.data)
+        else:
+            return ""
+    def save(self):
+        userData[self.name] = self.data
+        writeJson("userData", userData)
 
 # 读取文件们
 info = readJson("info")
@@ -1511,10 +1562,13 @@ joinRl = RateLimiter(5, 7)
 wordRl = RateLimiter(30, 2)
 setuRl = RateLimiter(40, 5)
 left = Lefter(userData["leftMsg"])
-sawer = Sawer(userData["lastSaw"])
+sawer = Sawer()
 black = Black("black")
 ignore = Black("ignore")
 banned = Black("banned")
+disrepeat = Black("disrepeat")
+ader = Ads("ads")
+
 hasher = Hasher(data)
 hourCount = HourCount(msgCount)
 
@@ -1523,7 +1577,7 @@ lineReply = {
     "0.0": ["0.0.0", ".0.", ";0;"],
     "游戏": ["\n".join([
         "象棋(cc), 真心话(t), uno(u), 数字炸弹(b), 三国杀(s), 干瞪眼(g), wordle(w), 蛇棋(sl), 大富翁(ru)",
-        "扑克(p), 猜单双(oe), 炸金花(z), 21点(bj)",
+        "扑克(&zwj;p), 猜单双(oe), 炸金花(z), 21点(bj)",
         "发送`<前缀> help`获取对应帮助",
         "例: u help"
     ])],
