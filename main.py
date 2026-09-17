@@ -4,7 +4,7 @@ from static import *
 from games import bomber, chess, truth, uno, dryEye, countryKill, wordle, snakeLadder, richup, poker
 from money import bank, stock, LoanStatus, oddEven, zhaJinHua, blackjack
 
-# OOP, 但不完全OOP
+# OOP, 但不完
 class Awaya:
     def __init__(self, channel: str, nick: str, passwd: str="", color: str=""):
         self.nick = nick
@@ -19,7 +19,7 @@ class Awaya:
         self.users = Users()
         self.looker = Looker()
         self.motded = False
-        
+
         # 从日志加载200条peep
         lines = []
         if os.path.exists(f"logs/{self.channel}_{sysList[3]}.txt"):
@@ -275,6 +275,7 @@ class Awaya:
             "",
             "---",
             "#### 最近更新",
+            "26.9.17: kkme可关闭；使用空格一次kill多人；kklog（踢出记录）。写代码真爽😋",
             "25.8.10: 大富翁增加交易系统",
             "25.8.8: 大富翁demo",
             "25.8.4: 蛇棋",
@@ -324,7 +325,7 @@ class Awaya:
         hash_ = self.users.getAttr(sender, "hash")
         if msgRl.frisk(hash_, 1+len(msg)/512 + score):
             msgRl.records[hash_]["score"] = msgRl.threshold / 2
-            self.kick(sender)
+            self.kick(sender, reason="消息频率RL")
         for word in banWords:
             try:
                 matched = re.search(word, msg)
@@ -332,9 +333,13 @@ class Awaya:
                 continue
             if matched and wordRl.frisk(hash_, 1):
                 wordRl.records[hash_]["score"] = wordRl.threshold / 2
-                self.kick(sender)
+                self.kick(sender, reason="封禁词RL")
     # 踢
-    def kick(self, *nicks, assert_: bool=False) -> bool:
+    def kick(self, *nicks, assert_: bool=False, mod: str="",  reason: str="kill命令") -> bool:
+        if not mod:
+            mod = self.nick
+        mod = mod + "#" + str(self.users.getAttr(mod, "trip"))
+
         kkNicks = []
         for nick in nicks:
             if nick == self.nick or self.users.getAttr(nick, "trip") in whiteList:
@@ -346,8 +351,22 @@ class Awaya:
                 self.blacktemp.append(nick)
                 kkNicks.append(nick)
         if kkNicks:
-            self.sendMsg(KICK + " " + " ".join(kkNicks), force=True)
+            # self.sendMsg(KICK + " " + " ".join(kkNicks), force=True)
+            threading.Thread(target=self._kick_thread, args=(kkNicks, reason)).start()
         return True
+    # 多线程kick（？）
+    def _kick_thread(self, mod: str, nicks: list[str], reason: str):
+        successed = []
+        for nick in nicks:
+            if nick in self.users:
+                successed.append(nick)
+                self.sendMsg(KICK + " " + nick, force=True)
+                time.sleep(0.5)
+        if successed:
+            kicker.add(mod, ", ".join(successed), reason)
+        else:
+            self.sendMsg("失败，昵称不存在")
+
     ## 多线程updatemsg
     def updateFunc(self, func, cid, *args):
         threading.Thread(target=lambda: self.updateMsg("overwrite", func(*args), cid)).start()
@@ -459,7 +478,7 @@ class Awaya:
                 attr = namePure(msg_list[2])
                 nicks = self.users.attrsGet(msg_list[1], attr)
                 if nicks:
-                    assert_ = self.kick(*nicks, assert_=True)
+                    assert_ = self.kick(*nicks, assert_=True, reason="Ban命令", mod=sender)
                     if assert_:
                         self.appText(banned.add(msg_list[1], attr))
                     else:
@@ -491,7 +510,7 @@ class Awaya:
                     self.appText(f"添加成功(☆▽☆)")
                     writeJson("answer", answer)
             elif command == "kill":
-                self.kick(*msg[6:].split())
+                self.kick(*msg[6:].split(), mod=sender)
             elif command == "gnkey":
                 key = randomStr(10)
                 keys[trip] = key
@@ -664,7 +683,7 @@ class Awaya:
             elif command == "kkal":
                 try:
                     chocol = int(msg[6:])
-                    self.kick(*self.nicks[-chocol:])
+                    self.kick(*self.nicks[-chocol:], mod=sender)
                 except ValueError:
                     self.appText("寄了吧你")
             elif command == "chkr":
@@ -962,15 +981,23 @@ class Awaya:
                 trip_ = self.users.getAttr(nick, "trip")
                 if not trip:
                     self.appText("你没有识别码！")
+                elif trip in whiteList and nick == "*":
+                    sysList[11] = not sysList[11]
+                    self.appText(f"设置成功，当前kkme是否开启：{sysList[11]}")
+                elif not sysList[11]:
+                    self.appText("kkme已关闭，请联系管理开启")
                 elif not nick:
+                    kkNicks = []
                     for kcin, canyu in self.users:
                         if kcin != sender and canyu["trip"] == trip:
-                            self.sendMsg(KICK + " " + kcin)
-                            break
+                            kkNicks.append(kcin)
+                    self.kick(*kkNicks, reason="kkme", mod=sender)
                 elif trip == trip_:
-                    self.sendMsg(KICK + " " + nick)
+                    self.kick(nick, reason="kkme", mod=sender)
                 else:
                     self.appText("识别码不符！")
+            elif command == "kklog":
+                self.appText(kicker.format())
             
             # 金钱系统
             elif command == "aka":
@@ -1288,12 +1315,13 @@ class Awaya:
 
         for i in protect:
             if re.search(i, joiner) and protect[i] != trip:
-                self.sendMsg(f"昵称{i}已经被识别码#{protect[i]}绑定，请使用其他名字重进\nNickname {i} has already been bound to trip #{protect[i]}. Please use another name to rejoin")
-                self.sendMsg(f"{KICK} {joiner}")
+                self.sendMsg(f"昵称{i}已经被识别码#{protect[i]}绑定，请使用其他名字重进\n" + 
+                    "Nickname {i} has already been bound to trip #{protect[i]}. Please use another name to rejoin")
+                self.kick(joiner, reason="识别码已被占用")
                 return
 
         if banned.check(**result):
-            self.kick(joiner)
+            self.kick(joiner, reason="被Ban")
         elif black.check(**result):
             pass
         else:
@@ -1336,7 +1364,7 @@ class Awaya:
             if nick == self.nick:
                 self.userid = user["userid"]
             if banned.check(**user):
-                self.kick(nick)
+                self.kick(nick, reason="被Ban")
         writeJson("hash", data)
 
         if self.color:

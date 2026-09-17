@@ -985,38 +985,36 @@ class RateLimiter:
     def waits(self, name: str, to) -> int:
         return int(math.log2(self.records[name]["score"] / to) * self.halflife)
 ## 用户容器
-class Users:
-    def __init__(self):
-        self.data = {}
+class Users(dict[str, dict]):
     def addUser(self, nick, **kwargs):
-        self.data[nick] = dict(kwargs, nick=nick)
+        self[nick] = dict(kwargs, nick=nick)
     def getUser(self, nick) -> dict:
         try:
-            return self.data[nick]
+            return self[nick]
         except KeyError:
             return None # 乖巧
     def delUser(self, nick):
-        del self.data[nick]
+        del self[nick]
     def getAttr(self, nick, attr):
         try:
-            return self.data[nick][attr]
+            return self[nick][attr]
         except KeyError:
             return None # 乖巧
     def attrGet(self, attr, value):
-        for nick, eric in self.data.items():
+        for nick, eric in self.items():
             if eric[attr] == value:
                 return nick
         return None # 乖巧
     def attrsGet(self, attr, value) -> list:
         zhuyue = []
-        for nick, maggie in self.data.items():
+        for nick, maggie in self.items():
             if maggie[attr] == value:
                 zhuyue.append(nick)
         return zhuyue
     def changeAttr(self, nick, attr, value):
-        self.data[nick][attr] = value
+        self[nick][attr] = value
     def __iter__(self):
-        return iter(self.data.items())
+        return iter(self.items())
 ## 消息记录器
 class Peeper:
     def __init__(self):
@@ -1524,6 +1522,20 @@ class Ads:
     def save(self):
         userData[self.name] = self.data
         writeJson("userData", userData)
+## 踢出记录
+class Kicker(list[list[str]]):
+    def add(self, mod, prisoner, reason):
+        self.append([mod, prisoner, reason, ftime(now())])
+        if len(self) > 10:
+            self.pop(0)
+    def format(self) -> str:
+        if not self:
+            return "当前还没有记录"
+        else:
+            _2923 = ["踢出记录：", "---"]
+            for mod, prisoner, reason, time_ in self:
+                _2923.append(f"{time_}：{mod} 踢出了 {prisoner}。（{reason}）")
+            return "\n".join(_2923)
 
 # 读取文件们
 info = readJson("info")
@@ -1540,8 +1552,9 @@ URL, TOKEN = info["url"], info["token"]
 NAME, OWNER = info["name"], info["owner"]
 
 # 全局变量
-## [0涩图开关, 1报时开关, 2休眠开关, 3当前日期, 4sender nick, 5报错是否直接报错, 6心跳频率(秒), 7stfu时间, 8玩的, 9复读库, 10突然说话值]
-sysList = [False, True, False, nowDay(), "", info["debug"], 120, 0, False, [], 960]
+## [0涩图开关, 1报时开关, 2休眠开关, 3当前日期, 4sender nick, 5报错是否直接报错, 6心跳频率(秒), 7stfu时间, 
+## 8玩的, 9复读库, 10突然说话值, 11stfu开关]
+sysList = [False, True, False, nowDay(), "", info["debug"], 120, 0, False, [], 960, True]
 ## [0上次重启]
 status_list = [ftime(now())]
 
@@ -1557,7 +1570,7 @@ protect =  userData["protect"]
 keys = userData["keys"]
 welcome = userData["welText"]
 
-msgRl = RateLimiter(20, 13)
+msgRl = RateLimiter(20, 12)
 joinRl = RateLimiter(5, 7)
 wordRl = RateLimiter(30, 2)
 setuRl = RateLimiter(40, 5)
@@ -1568,6 +1581,7 @@ ignore = Black("ignore")
 banned = Black("banned")
 disrepeat = Black("disrepeat")
 ader = Ads("ads")
+kicker = Kicker()
 
 hasher = Hasher(data)
 hourCount = HourCount(msgCount)
