@@ -352,7 +352,7 @@ class Awaya:
                 kkNicks.append(nick)
         if kkNicks:
             # self.sendMsg(KICK + " " + " ".join(kkNicks), force=True)
-            threading.Thread(target=self._kick_thread, args=(kkNicks, reason)).start()
+            threading.Thread(target=self._kick_thread, args=(mod, kkNicks, reason)).start()
         return True
     # 多线程kick（？）
     def _kick_thread(self, mod: str, nicks: list[str], reason: str):
